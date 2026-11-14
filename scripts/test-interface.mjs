@@ -138,9 +138,18 @@ try {
   );
   await check(
     'Switch supports keyboard navigation',
+    `document.activeElement===showBoth&&listeningView==='both'`
+  );
+  await evaluate(
+    `showBoth.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}))`
+  );
+  await check(
+    'Switch reaches every mode from the keyboard',
     `document.activeElement===showVisual&&listeningView==='visual'`
   );
   await evaluate(`exitImmersive()`);
+  // Текст песни возвращается в боковую панель после анимации закрытия.
+  await pause(450);
   await check(
     'Closing restores sidebar nodes and controls',
     `$('lyrics').closest('.now-panel')!==null&&alignmentTools.closest('.now-details')!==null&&!document.body.classList.contains('track-focus')&&listeningHomes.size===0`
@@ -193,8 +202,8 @@ try {
   );
   await evaluate(`exitImmersive();setPalette({...current,cover:''})`);
   await check(
-    'Missing cover clears the previous album palette',
-    `JSON.stringify(targetPalette)===JSON.stringify(CoverPalette.fallback)`
+    'Missing cover takes the generated cover palette',
+    `JSON.stringify(targetPalette)===JSON.stringify(generatedPalette({...current,cover:''}))`
   );
   await call('Emulation.setDeviceMetricsOverride', {
     width: 1600,

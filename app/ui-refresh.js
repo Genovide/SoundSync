@@ -222,14 +222,18 @@
   // У трека без обложки цвета визуализации и фона берём из его сгенерированной обложки,
   // а не серые запасные: иначе на экране фиолетовая обложка, а сцены — серые.
   const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const generatedPalette = (t) => {
+    const seed = coverHash(
+        (meaningfulAlbum(t) ? t.album + '\0' : t.title + '\0') + (t.artist || '')
+      ),
+      [a, b] = COVER_PALETTES[seed % COVER_PALETTES.length].map(hexToRgb);
+    return [a, b, a.map((v, i) => Math.round((v + b[i]) / 2))];
+  };
+  window.generatedPalette = generatedPalette;
   const setPaletteBeforeRefresh = setPalette;
   setPalette = function (t) {
     if (t && !t.cover && !t.customCover) {
-      const seed = coverHash(
-          (meaningfulAlbum(t) ? t.album + '\0' : t.title + '\0') + (t.artist || '')
-        ),
-        [a, b] = COVER_PALETTES[seed % COVER_PALETTES.length].map(hexToRgb);
-      applyCoverPalette([a, b, a.map((v, i) => Math.round((v + b[i]) / 2))]);
+      applyCoverPalette(generatedPalette(t));
       return;
     }
     setPaletteBeforeRefresh(t);
