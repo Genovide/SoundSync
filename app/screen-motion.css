@@ -1,0 +1,144 @@
+/* Плавные переходы экрана трека: открытие, «В библиотеку» и смена режимов.
+   Класс .hidden ставится сразу (логика и тесты на него опираются), а исчезновение
+   отыгрывается переходом: элемент остаётся в раскладке, гаснет и только потом
+   становится невидимым для мыши и чтения с экрана. */
+#immersive {
+  --screen-in: 420ms;
+  --screen-out: 260ms;
+  --ease-out: cubic-bezier(0.2, 0.85, 0.25, 1);
+  transition:
+    opacity var(--screen-in) ease,
+    visibility 0s linear 0s;
+}
+#immersive.hidden {
+  display: grid !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--screen-out) ease,
+    visibility 0s linear var(--screen-out);
+}
+
+/* Содержимое въезжает чуть снизу, обложка — с лёгким увеличением, по очереди. */
+#immersive > :is(.immersive-top, .immersive-info, .listening-lyrics),
+#immersive .immersive-art {
+  transition:
+    opacity var(--screen-in) ease,
+    transform 560ms var(--ease-out),
+    filter var(--screen-in) ease;
+}
+#immersive .immersive-info {
+  transition-delay: 60ms;
+}
+#immersive .immersive-art {
+  transition-delay: 40ms;
+}
+#immersive.hidden > :is(.immersive-top, .immersive-info) {
+  opacity: 0;
+  transform: translateY(14px);
+  transition-duration: var(--screen-out);
+  transition-delay: 0s;
+}
+#immersive.hidden > .immersive-top {
+  transform: translateY(-10px);
+}
+#immersive.hidden .immersive-art {
+  transform: scale(0.94);
+  transition-duration: var(--screen-out);
+  transition-delay: 0s;
+}
+
+/* Сцена проявляется и гаснет мягко, без резкого включения. */
+#immersive .visual-panel {
+  transition:
+    opacity 520ms ease,
+    visibility 0s linear 0s;
+}
+#immersive .visual-panel.hidden {
+  display: block !important;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 320ms ease,
+    visibility 0s linear 320ms;
+}
+#immersive .visual-canvas {
+  transition: opacity 520ms ease;
+}
+
+/* Текст песни всплывает снизу из лёгкого размытия и так же уходит. */
+#immersive .listening-lyrics.hidden {
+  display: flex !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(22px);
+  filter: blur(8px);
+  transition:
+    opacity 220ms ease,
+    transform 260ms ease,
+    filter 220ms ease,
+    visibility 0s linear 260ms;
+}
+#immersive .listening-lyrics {
+  transition:
+    opacity 480ms ease 80ms,
+    transform 620ms var(--ease-out) 80ms,
+    filter 480ms ease 80ms,
+    visibility 0s linear 0s;
+}
+
+/* Кнопка настроек сцены не прыгает, а гаснет на месте в режиме «Текст песни». */
+#immersive .listening-controls {
+  transition:
+    opacity 300ms ease,
+    visibility 0s linear 0s;
+}
+#immersive .listening-controls.hidden {
+  display: flex !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    visibility 0s linear 200ms;
+}
+
+/* Выбранная вкладка — подложка, которая переезжает между режимами. */
+#immersive .listening-switch {
+  position: relative;
+  isolation: isolate;
+}
+#immersive .listening-switch::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: var(--tab-w, 0);
+  transform: translateX(var(--tab-x, 0));
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: 0 1px 4px #0002;
+  transition:
+    transform 380ms var(--ease-out),
+    width 380ms var(--ease-out);
+}
+#immersive .listening-switch.pill-ready .listening-tab.active {
+  background: transparent;
+  box-shadow: none;
+}
+#immersive .listening-tab {
+  transition: color 240ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #immersive,
+  #immersive *,
+  #immersive *::before {
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+  }
+}

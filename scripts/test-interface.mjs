@@ -111,8 +111,8 @@ try {
     `[closeImmersive,viewSwitch,listeningControls].every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.height>0})`
   );
   await check(
-    'Cover and canvas do not overlap',
-    `immersiveArt.getBoundingClientRect().right<visualCanvas.getBoundingClientRect().left`
+    'Cover stays above the visualization',
+    `(()=>{const r=immersiveArt.getBoundingClientRect(),e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!e&&!visualPanel.contains(e)&&(immersiveArt.contains(e)||e.contains(immersiveArt)||immersiveInfo.contains(e))})()`
   );
   await check('Visualization renders', `visualPaints>0&&visualCanvas.width>0`);
   await screenshot('flat-visual');

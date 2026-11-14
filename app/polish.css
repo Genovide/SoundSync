@@ -582,43 +582,7 @@ h2 {
   pointer-events: auto;
 }
 
-/* Leave the whole mandala visible next to the album, on an unframed background. */
-.immersive.mandala-layout {
-  grid-template-columns: minmax(240px, 0.65fr) minmax(400px, 1.35fr);
-  gap: 20px 5%;
-}
-.mandala-layout .immersive-info {
-  grid-column: 1;
-  grid-row: 2;
-  max-width: 100%;
-  width: 100%;
-  padding: 10px 0 20px;
-  min-width: 0;
-}
-.mandala-layout .immersive-art {
-  width: min(100%, clamp(200px, 31vh, 320px));
-}
-.mandala-layout .visual-panel {
-  inset: 90px 3% 20px 40%;
-}
-.mandala-layout .immersive-title {
-  font-size: clamp(24px, 2.3vw, 35px);
-}
-@media (max-width: 1200px) {
-  .immersive.mandala-layout {
-    grid-template-columns: minmax(220px, 0.65fr) minmax(360px, 1.35fr);
-    gap: 15px 4%;
-  }
-  .mandala-layout .visual-panel {
-    left: 39%;
-    right: 2%;
-  }
-  .mandala-layout .immersive-art {
-    width: min(100%, 260px);
-  }
-}
-
-/* Scene selector and a composition suited to each visualizer. */
+/* Выбор сцены (скрытый список; сцены выбираются в панели настроек визуализации). */
 select.visual-mode {
   appearance: none;
   min-width: 205px;
@@ -639,124 +603,8 @@ select.visual-mode:focus-visible {
   outline: 2px solid #ffd629;
   outline-offset: 3px;
 }
-.immersive.starburst-layout {
-  grid-template-columns: minmax(400px, 1.35fr) minmax(240px, 0.65fr);
-  gap: 20px 5%;
-}
-.starburst-layout .immersive-info {
-  grid-column: 2;
-  grid-row: 2;
-  max-width: 100%;
-  width: 100%;
-  padding: 10px 0 20px;
-  min-width: 0;
-}
-.starburst-layout .immersive-art {
-  width: min(100%, clamp(200px, 31vh, 320px));
-}
-.starburst-layout .visual-panel {
-  inset: 90px 40% 20px 3%;
-}
-.starburst-layout .immersive-title {
-  font-size: clamp(24px, 2.3vw, 35px);
-}
-.bars-layout .immersive-info {
-  align-self: start;
-  justify-self: center;
-  display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
-  column-gap: 26px;
-  text-align: left;
-  max-width: 75%;
-  padding: 20px 0 0;
-}
-.bars-layout .immersive-art {
-  grid-column: 1;
-  grid-row: 1/4;
-  width: 140px;
-  margin: 0;
-  border-radius: 15px;
-}
-.bars-layout .immersive-title {
-  grid-column: 2;
-  align-self: end;
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-.bars-layout .immersive-artist,
-.bars-layout .immersive-album {
-  grid-column: 2;
-}
-.bars-layout .visual-panel {
-  inset: 260px 4% 15px;
-}
 @media (max-width: 1200px) {
-  .immersive.starburst-layout {
-    grid-template-columns: minmax(360px, 1.35fr) minmax(220px, 0.65fr);
-    gap: 15px 4%;
-  }
-  .starburst-layout .visual-panel {
-    right: 39%;
-    left: 2%;
-  }
-  .starburst-layout .immersive-art {
-    width: min(100%, 260px);
-  }
   .immersive-badge {
     display: none;
   }
-  .bars-layout .immersive-info {
-    max-width: 85%;
-  }
-  select.visual-mode {
-    min-width: 190px;
-  }
-}
-
-.starburst-layout .visual-canvas {
-  mask-image: radial-gradient(ellipse 72% 80% at 50% 50%, #000 32%, #000b 60%, transparent 80%);
-}
-.bars-layout .visual-canvas {
-  mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent);
-}
-
-.immersive.milkdrop-layout {
-  grid-template-columns: minmax(220px, 0.55fr) minmax(450px, 1.45fr);
-}
-.milkdrop-layout .immersive-info {
-  grid-column: 1;
-  grid-row: 2;
-  align-self: end;
-  max-width: 100%;
-  padding: 15px 0 40px;
-  text-align: left;
-  justify-self: start;
-  width: 100%;
-}
-.milkdrop-layout .immersive-art {
-  width: min(100%, 200px);
-  margin: 0 0 22px;
-  border-radius: 16px;
-}
-.milkdrop-layout .immersive-title {
-  font-size: 28px;
-}
-.milkdrop-layout .immersive-artist {
-  font-size: 19px;
-}
-.milkdrop-layout .visual-panel {
-  inset: 85px 2% 20px 30%;
-}
-.milkdrop-layout .visual-canvas {
-  mask-image: radial-gradient(ellipse 74% 80% at 50% 50%, #000 40%, #000b 62%, transparent 82%);
-}
-
-/* «Лучи»: свет растворяется к краям, без жёсткой рамки панели. */
-.rays-layout .visual-panel {
-  border: 0;
-  background: none;
-  box-shadow: none;
-}
-.rays-layout .visual-canvas {
-  mask-image: radial-gradient(ellipse 64% 62% at 50% 50%, #000 40%, #0008 66%, transparent 96%);
 }
