@@ -191,11 +191,6 @@
   pointer-events: auto;
   margin-top: 18px;
 }
-.bars-layout .immersive-info > .delete-track {
-  grid-column: 2;
-  width: max-content;
-  margin-top: 8px;
-}
 .wave-orb-label {
   display: block !important;
   position: absolute;
@@ -270,10 +265,6 @@ button:disabled {
   pointer-events: auto;
   margin-top: 18px;
 }
-.bars-layout .immersive-info > .alignment-button {
-  grid-column: 2;
-  width: max-content;
-}
 
 .mini-delete {
   font-size: 10px;
@@ -324,9 +315,6 @@ button:disabled {
   width: 38px;
   height: 38px;
   margin-top: 18px;
-}
-.bars-layout .immersive-info > .immersive-delete {
-  width: 36px;
 }
 .now-panel .alignment-tools {
   display: flex;

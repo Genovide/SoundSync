@@ -8,6 +8,8 @@ const svgPaths = {
   repeat: 'M4 10V8a4 4 0 014-4h12M17 1l3 3-3 3M20 14v2a4 4 0 01-4 4H4M7 17l-3 3 3 3',
   close: 'M6 6l12 12M18 6L6 18',
   back: 'M15 5l-7 7 7 7',
+  settings:
+    'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4z',
 };
 function icon(name) {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -42,9 +44,13 @@ const viewSwitch = node('div', 'listening-switch');
 viewSwitch.setAttribute('role', 'tablist');
 viewSwitch.setAttribute('aria-label', 'Экран трека');
 const showVisual = node('button', 'listening-tab active', 'Визуализация'),
+  showBoth = node('button', 'listening-tab', 'Вместе'),
   showLyrics = node('button', 'listening-tab', 'Текст песни');
+showBoth.title = 'Визуализация + текст песни';
+const viewTabs = [showVisual, showBoth, showLyrics];
 for (const [button, id, panel] of [
   [showVisual, 'visual-view-tab', 'visual-panel'],
+  [showBoth, 'both-view-tab', 'visual-panel listening-lyrics'],
   [showLyrics, 'lyrics-view-tab', 'listening-lyrics'],
 ]) {
   button.id = id;
@@ -115,17 +121,26 @@ function restoreListeningContent() {
   listeningHomes.clear();
   panelTab(sidebarLyrics);
 }
+// Три режима: только сцена, сцена с текстом поверх («Вместе») и только текст.
 function setListeningView(mode) {
-  listeningView = mode === 'lyrics' ? 'lyrics' : 'visual';
-  const lyrics = listeningView === 'lyrics';
+  listeningView = ['lyrics', 'both'].includes(mode) ? mode : 'visual';
+  const lyrics = listeningView !== 'visual',
+    scene = listeningView !== 'lyrics';
+  // Запоминаем выбор между сценой и «Вместе», чтобы экран трека открывался так же.
+  if (scene)
+    try {
+      localStorage.setItem('listening-view', listeningView);
+    } catch {}
   document.body.classList.toggle('lyrics-focus', lyrics);
-  immersive.classList.toggle('showing-lyrics', lyrics);
-  visualPanel.classList.toggle('hidden', lyrics);
+  immersive.classList.toggle('showing-lyrics', listeningView === 'lyrics');
+  immersive.classList.toggle('showing-both', listeningView === 'both');
+  visualPanel.classList.toggle('hidden', !scene);
   listeningLyrics.classList.toggle('hidden', !lyrics);
-  listeningControls.classList.toggle('hidden', lyrics);
+  listeningControls.classList.toggle('hidden', !scene);
   for (const [button, active] of [
-    [showVisual, !lyrics],
-    [showLyrics, lyrics],
+    [showVisual, listeningView === 'visual'],
+    [showBoth, listeningView === 'both'],
+    [showLyrics, listeningView === 'lyrics'],
   ]) {
     button.classList.toggle('active', active);
     button.setAttribute('aria-selected', String(active));
@@ -141,28 +156,23 @@ function setListeningView(mode) {
 viewSwitch.addEventListener('keydown', (event) => {
   if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
   event.preventDefault();
-  const next =
-    event.key === 'Home'
-      ? showVisual
-      : event.key === 'End'
-        ? showLyrics
-        : document.activeElement === showVisual
-          ? showLyrics
-          : showVisual;
+  const at = Math.max(0, viewTabs.indexOf(document.activeElement)),
+    next =
+      event.key === 'Home'
+        ? viewTabs[0]
+        : event.key === 'End'
+          ? viewTabs[viewTabs.length - 1]
+          : viewTabs[
+              (at + (event.key === 'ArrowRight' ? 1 : viewTabs.length - 1)) % viewTabs.length
+            ];
   next.click();
   next.focus();
 });
-let visualPreset = [
-    'rays',
-    'mandala',
-    'cover',
-    'starburst',
-    'centerbars',
-    'milkdrop',
-    'flowfield',
-  ].includes(localStorage.getItem('visual-preset'))
+// Шесть шейдерных сцен; прежние сохранённые значения (старые сцены) открываются как «Аврора».
+const SHADER_SCENES = Object.keys(window.shaderScenePresets || {});
+let visualPreset = SHADER_SCENES.includes(localStorage.getItem('visual-preset'))
     ? localStorage.getItem('visual-preset')
-    : 'rays',
+    : 'aurora',
   visualTick = 0,
   visualPaints = 0;
 function updateImmersive() {
@@ -188,9 +198,13 @@ function openImmersive() {
   }
   document.body.classList.add('track-focus');
   immersive.classList.remove('hidden');
-  setListeningView('visual');
+  let saved = 'visual';
+  try {
+    saved = localStorage.getItem('listening-view') === 'both' ? 'both' : 'visual';
+  } catch {}
+  setListeningView(saved);
   updateImmersive();
-  showVisual.focus();
+  (saved === 'both' ? showBoth : showVisual).focus();
 }
 function exitImmersive() {
   if (immersive.classList.contains('hidden')) return;
@@ -217,13 +231,22 @@ for (const id of ['mini-cover', 'now-cover']) {
 }
 closeImmersive.onclick = exitImmersive;
 showVisual.onclick = () => setListeningView('visual');
+showBoth.onclick = () => setListeningView('both');
 showLyrics.onclick = () => setListeningView('lyrics');
 const closeLyrics = closeImmersive;
 expand.onclick = openImmersive;
 expand.title = 'Открыть экран трека';
 expand.setAttribute('aria-label', 'Открыть визуализацию и текст песни');
 addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !document.querySelector('dialog[open]')) exitImmersive();
+  // Esc, который закрывает панель настроек визуализации, экран трека не закрывает. Проверяем
+  // и пометку, и саму панель: порядок обработчиков на window не гарантирован.
+  if (
+    event.key === 'Escape' &&
+    !event.defaultPrevented &&
+    !document.querySelector('dialog[open]') &&
+    !document.querySelector('.visual-settings:not(.hidden)')
+  )
+    exitImmersive();
 });
 audio.addEventListener('play', updateImmersive);
 audio.addEventListener('pause', () => (visualStatus.textContent = 'НА ПАУЗЕ'));
@@ -235,14 +258,27 @@ load = function (track) {
 };
 const vg = visualCanvas.getContext('2d'),
   levels = new Float32Array(80);
-let ribbonTime = 0,
-  ribbonPrevious = 0,
-  ribbonEnergy = 0;
+let visualPrevious = 0;
 const response = new AudioResponse();
-const mandalaBackground = new MandalaBackground();
-const milkdropBackground = new MilkdropBackground();
-const importedSceneRenderer = new ImportedSceneRenderer();
-const raysScene = new RaysScene();
+const shaderScene = new ShaderScene();
+const sceneInfo = window.shaderSceneInfo || {};
+
+// Палитра сцен: по умолчанию цвета обложки трека, либо одна из готовых.
+const VISUAL_PALETTES = {
+  cover: { name: 'Обложка', colors: null },
+  soundsync: { name: 'SoundSync', colors: ['#FFD23F', '#FF4FA3', '#7A5CFF'] },
+  neon: { name: 'Неон', colors: ['#00E5FF', '#7B2FFF', '#FF2E88'] },
+  sunset: { name: 'Закат', colors: ['#FF7A3D', '#FF3D6E', '#FFD9A0'] },
+  ice: { name: 'Лёд', colors: ['#9FD8FF', '#E8F4FF', '#4D7CFF'] },
+  mono: { name: 'Моно', colors: ['#FFFFFF', '#8E8E96', '#D2D2D8'] },
+};
+let visualPalette = VISUAL_PALETTES[localStorage.getItem('visual-palette')]
+  ? localStorage.getItem('visual-palette')
+  : 'cover';
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const scenePalette = () => VISUAL_PALETTES[visualPalette].colors?.map(hexRgb) || palette;
+
+// ——— Настройки визуализации: отдельная кнопка и панель, на экране только кнопка ———
 const reactionLabel = node('label', 'reaction-control'),
   reactionText = node('span', '', 'Реакция'),
   reactionSlider = node('input');
@@ -254,16 +290,148 @@ reactionSlider.value = localStorage.getItem('visual-sensitivity') || '1.4';
 reactionSlider.setAttribute('aria-label', 'Чувствительность визуализации');
 reactionSlider.oninput = () => localStorage.setItem('visual-sensitivity', reactionSlider.value);
 reactionLabel.append(reactionText, reactionSlider);
-listeningControls.append(reactionLabel);
+
+const visualSettingsButton = node('button', 'visual-settings-button'),
+  visualSettingsName = node('span', 'visual-settings-name');
+visualSettingsButton.type = 'button';
+visualSettingsButton.title = 'Настройки визуализации';
+visualSettingsButton.setAttribute('aria-haspopup', 'dialog');
+visualSettingsButton.setAttribute('aria-expanded', 'false');
+visualSettingsButton.append(icon('settings'), visualSettingsName);
+listeningControls.append(visualSettingsButton);
+
+const visualSettings = node('div', 'visual-settings hidden');
+visualSettings.setAttribute('role', 'dialog');
+visualSettings.setAttribute('aria-label', 'Настройки визуализации');
+const sceneGrid = node('div', 'visual-scene-grid'),
+  paletteRow = node('div', 'visual-palettes');
+for (const [id, info] of Object.entries(sceneInfo)) {
+  const card = node('button', 'visual-scene-card');
+  card.type = 'button';
+  card.dataset.scene = id;
+  card.append(
+    node('span', 'visual-scene-key', String(Object.keys(sceneInfo).indexOf(id) + 1)),
+    node('strong', '', info.name),
+    node('small', '', info.desc)
+  );
+  card.onclick = () => setVisualPreset(id);
+  sceneGrid.append(card);
+}
+for (const [id, p] of Object.entries(VISUAL_PALETTES)) {
+  const chip = node('button', 'visual-palette-chip');
+  chip.type = 'button';
+  chip.dataset.palette = id;
+  const swatch = node('i');
+  for (const c of p.colors || []) {
+    const s = node('span');
+    s.style.background = c;
+    swatch.append(s);
+  }
+  if (!p.colors) swatch.classList.add('cover-swatch');
+  chip.append(swatch, node('span', '', p.name));
+  chip.onclick = () => {
+    visualPalette = id;
+    localStorage.setItem('visual-palette', id);
+    refreshVisualMode();
+  };
+  paletteRow.append(chip);
+}
+visualMode.classList.add('visually-hidden');
+visualMode.tabIndex = -1;
+visualMode.setAttribute('aria-hidden', 'true');
+visualSettings.append(
+  node('div', 'visual-settings-title', 'Визуализация'),
+  node('div', 'visual-settings-label', 'Сцена'),
+  sceneGrid,
+  node('div', 'visual-settings-label', 'Цвета'),
+  paletteRow,
+  reactionLabel,
+  visualMode
+);
+immersive.append(visualSettings);
+const sceneCaption = node('div', 'scene-caption');
+sceneCaption.setAttribute('aria-live', 'polite');
+visualPanel.append(sceneCaption);
+
+function setVisualSettingsOpen(open) {
+  visualSettings.classList.toggle('hidden', !open);
+  visualSettingsButton.classList.toggle('active', open);
+  visualSettingsButton.setAttribute('aria-expanded', String(open));
+}
+visualSettingsButton.onclick = () =>
+  setVisualSettingsOpen(visualSettings.classList.contains('hidden'));
+document.addEventListener('pointerdown', (event) => {
+  if (
+    !visualSettings.classList.contains('hidden') &&
+    !visualSettings.contains(event.target) &&
+    !visualSettingsButton.contains(event.target)
+  )
+    setVisualSettingsOpen(false);
+});
+// Esc сначала закрывает панель настроек, а не весь экран трека; 1–6 переключают сцены.
+addEventListener(
+  'keydown',
+  (event) => {
+    if (immersive.classList.contains('hidden') || listeningView === 'lyrics') return;
+    if (event.target.matches?.('input,textarea,select,[contenteditable]')) return;
+    if (event.key === 'Escape' && !visualSettings.classList.contains('hidden')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setVisualSettingsOpen(false);
+      visualSettingsButton.focus();
+      return;
+    }
+    const n = Number(event.key);
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && n >= 1 && n <= SHADER_SCENES.length) {
+      event.preventDefault();
+      setVisualPreset(SHADER_SCENES[n - 1]);
+    }
+  },
+  true
+);
+
+let captionTimer = 0;
+function showSceneCaption() {
+  const info = sceneInfo[visualPreset];
+  if (!info) return;
+  sceneCaption.replaceChildren(node('strong', '', info.name), node('span', '', info.desc));
+  sceneCaption.classList.remove('visible');
+  void sceneCaption.offsetWidth;
+  sceneCaption.classList.add('visible');
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => sceneCaption.classList.remove('visible'), 2600);
+}
+
+// Запасная 2D-сцена на случай, если видеокарта не справилась с шейдером.
+function drawFallback(w, h, colors, moving) {
+  const [a, b] = colors,
+    cx = w / 2,
+    cy = h / 2,
+    pulse = moving ? response.bass : 0.1;
+  const glow = vg.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.6);
+  glow.addColorStop(0, `rgba(${a},${0.18 + pulse * 0.3})`);
+  glow.addColorStop(1, 'rgba(14,13,16,0)');
+  vg.fillStyle = glow;
+  vg.fillRect(0, 0, w, h);
+  const bars = 64,
+    gap = w / bars;
+  for (let i = 0; i < bars; i++) {
+    const v = levels[Math.floor((i / bars) * 80)],
+      bh = Math.max(2, v * h * 0.55);
+    vg.fillStyle = `rgba(${i % 2 ? a : b},${0.35 + v * 0.6})`;
+    vg.fillRect(i * gap + gap * 0.2, cy - bh / 2, gap * 0.6, bh);
+  }
+}
+const fallbackNotified = {};
 
 function drawVisualizer(ms) {
   requestAnimationFrame(drawVisualizer);
+  // Все сцены считает видеокарта, поэтому рисуем в каждом кадре дисплея.
   if (
     document.hidden ||
     immersive.classList.contains('hidden') ||
     visualPanel.classList.contains('hidden') ||
-    // Сцены на Canvas 2D рисуются ~30 раз в секунду; «Лучи» считает видеокарта — в каждом кадре.
-    ms - visualTick < (visualPreset === 'rays' ? 4 : 32)
+    ms - visualTick < 4
   )
     return;
   visualTick = ms;
@@ -276,15 +444,14 @@ function drawVisualizer(ms) {
     visualCanvas.width = Math.round(w * dpr);
     visualCanvas.height = Math.round(h * dpr);
   }
-  vg.setTransform(dpr, 0, 0, dpr, 0, 0);
-  vg.clearRect(0, 0, w, h);
+  // Сцены реагируют на музыку и при системной настройке «уменьшить движение»: там они просто
+  // двигаются медленнее (это учитывает ShaderScene), а не замирают.
   const playing = analyser && !audio.paused,
-    animate = playing && effect && !reduced;
+    moving = !!(playing && effect);
   if (playing) {
     analyser.getByteFrequencyData(freq);
     analyser.getByteTimeDomainData(wave);
   }
-  let signal = 0;
   for (let i = 0; i < 80; i++) {
     const bin = Math.min(
       (freq?.length || 512) - 1,
@@ -292,248 +459,124 @@ function drawVisualizer(ms) {
     );
     const raw = playing ? freq[bin] / 255 : 0;
     levels[i] += (raw - levels[i]) * 0.08;
-    signal += levels[i];
   }
-  ribbonEnergy += (signal / 80 - ribbonEnergy) * 0.12;
-  const dt = Math.min(80, ms - (ribbonPrevious || ms));
-  ribbonPrevious = ms;
+  const dt = Math.min(80, ms - (visualPrevious || ms)) || 16;
+  visualPrevious = ms;
   response.update(
     freq,
     wave,
     ctx?.sampleRate || 48000,
     analyser?.fftSize || 1024,
     Number(reactionSlider.value),
-    !!animate,
-    dt || 32
+    moving,
+    dt
   );
-  if (animate) ribbonTime += dt * 0.0002 * (response.rms * 0.7 + response.bass * 0.6);
-  if (!effect) return;
-  const hex = (color) =>
-    '#' +
-    color
-      .map((x) =>
-        Math.round(Math.min(255, x * 0.65 + 70))
-          .toString(16)
-          .padStart(2, '0')
-      )
-      .join('');
-  const sceneColors = palette.map(hex);
-  window.mandalaScene.colors = [sceneColors[1], sceneColors[0], sceneColors[2], sceneColors[0]];
-  for (const config of Object.values(window.importedScenes)) {
-    config.colors = sceneColors;
-    if (config.background?.gradient) config.background.gradient.colors = sceneColors;
-    config.visualizer.color = sceneColors[0];
-    config.visualizer.color2 = sceneColors[1];
-    config.visualizer.colorMode = 'theme';
-  }
+  const colors = scenePalette();
   if (
-    visualPreset === 'rays' &&
-    raysScene.draw(
-      vg,
-      visualCanvas.width,
-      visualCanvas.height,
-      response,
-      palette,
-      dt,
-      !!animate,
-      effect === 1 ? 0.65 : 1
-    )
-  )
-    return;
-  if (visualPreset === 'rays' && (raysScene.error || raysScene.lost) && !raysScene.notified) {
-    // Видеокарта не справилась с WebGL: показываем 2D-волны вместо чёрного экрана.
-    raysScene.notified = true;
-    toast('«Лучи» не поддерживаются этой видеокартой — показываем волны');
-  }
-  if (visualPreset === 'mandala') {
-    vg.save();
-    vg.setTransform(1, 0, 0, 1, 0, 0);
-    mandalaBackground.draw(
-      vg,
-      visualCanvas.width,
-      visualCanvas.height,
-      response,
-      levels,
-      dt,
-      !!animate,
-      effect === 1 ? 0.65 : 1
-    );
-    vg.restore();
-    return;
-  }
-  if (visualPreset === 'milkdrop') {
-    milkdropBackground.draw(
-      vg,
-      visualCanvas.width,
-      visualCanvas.height,
-      response,
-      wave,
-      dt,
-      !!animate,
-      Number(reactionSlider.value),
-      effect === 1 ? 0.65 : 1
-    );
-    return;
-  }
-  if (window.importedScenes[visualPreset]) {
-    vg.save();
-    vg.setTransform(1, 0, 0, 1, 0, 0);
-    importedSceneRenderer.draw(
+    shaderScene.draw(
       vg,
       visualCanvas.width,
       visualCanvas.height,
       visualPreset,
       response,
-      freq,
+      playing ? freq : null,
       ctx?.sampleRate || 48000,
       analyser?.fftSize || 1024,
-      Number(reactionSlider.value),
+      colors,
       dt,
-      !!animate,
+      moving,
       effect === 1 ? 0.65 : 1
-    );
-    vg.restore();
+    )
+  )
     return;
+  if (!fallbackNotified[visualPreset]) {
+    fallbackNotified[visualPreset] = true;
+    toast(
+      `Сцена «${sceneInfo[visualPreset]?.name || visualPreset}» не поддерживается этой видеокартой — показываем простую визуализацию`
+    );
   }
-  const glow = palette[0].map((x) => Math.round(Math.min(255, x * 0.65 + 80)));
-  const cool = palette[1].map((x) => Math.round(Math.min(255, x * 0.75 + 50)));
-  const t = ribbonTime,
-    amp = h * (0.012 + response.bass * 0.18 + response.rms * 0.09),
-    opacity = playing ? Math.min(1, 0.18 + response.rms * 0.7 + response.hit * 0.35) : 0.15;
-  const gradient = vg.createLinearGradient(0, 0, w, h);
-  gradient.addColorStop(0, `rgb(${cool})`);
-  gradient.addColorStop(0.5, `rgb(${glow})`);
-  gradient.addColorStop(1, `rgb(${cool})`);
-  vg.strokeStyle = gradient;
-  vg.globalCompositeOperation = 'screen';
-  for (let ribbon = 0; ribbon < 3; ribbon++) {
-    for (let line = 0; line < 30; line++) {
-      const q = line / 29,
-        phase = q * Math.PI * 1.2 + ribbon * 1.9;
-      vg.beginPath();
-      for (let x = -8; x <= w + 8; x += 8) {
-        const u = x / w;
-        const position = Math.max(0, Math.min(79, u * 79));
-        const bi = Math.floor(position);
-        const band =
-          levels[bi] * (1 - (position - bi)) + levels[Math.min(79, bi + 1)] * (position - bi);
-        const envelope = 0.55 + 0.45 * Math.sin(u * Math.PI);
-        const main = Math.sin(u * 7.8 + t + phase) * amp * 1.2;
-        const harmonic =
-          Math.sin(u * 12 - t * 0.65 + response.mid * 0.45 + ribbon * 2 + q * 0.7) *
-          h *
-          (0.004 + response.mid * 0.055);
-        const spread =
-          (q - 0.5) *
-          h *
-          (0.015 + response.bass * 0.19 + response.high * 0.08) *
-          Math.sin(u * 8 - t * 0.55 + ribbon * 2);
-        const wi = Math.max(0, Math.min(126, u * 127));
-        const wj = Math.floor(wi);
-        const actualWave =
-          response.shape[wj] * (1 - (wi - wj)) + response.shape[wj + 1] * (wi - wj);
-        const reaction = animate
-          ? Math.sin(u * 14 + t + phase) * band * h * 0.006 +
-            Math.sin(u * 4 + phase) * response.hit * h * 0.025
-          : 0;
-        const y = h * (0.55 + ribbon * 0.025) + (main + harmonic) * envelope + spread + reaction;
-        x === -8 ? vg.moveTo(x, y) : vg.lineTo(x, y);
-      }
-      vg.globalAlpha = (line % 7 === 0 ? 0.5 : 0.2) * opacity * (effect === 1 ? 0.65 : 1);
-      vg.lineWidth = (line % 7 === 0 ? 1.25 : 0.7) + response.hit * 0.3 + response.high * 0.15;
-      vg.shadowColor = `rgba(${glow},.6)`;
-      vg.shadowBlur = line % 7 === 0 ? 6 + response.hit * 9 + response.high * 5 : 0;
-      vg.stroke();
-    }
-  }
-  vg.shadowBlur = 0;
-  vg.globalAlpha = 1;
-  vg.globalCompositeOperation = 'source-over';
+  vg.setTransform(dpr, 0, 0, dpr, 0, 0);
+  vg.clearRect(0, 0, w, h);
+  drawFallback(w, h, colors, moving);
 }
 requestAnimationFrame(drawVisualizer);
-// Put the palette switch with the top controls; the canvas fills the entire background.
-listeningControls.append(visualMode);
-const visualOptions = {
-  rays: 'Лучи',
-  mandala: 'Mandala Drop',
-  cover: 'Волны · цвет обложки',
-  starburst: 'Огненные лучи',
-  centerbars: 'Ретро-спектр',
-  milkdrop: 'MilkDrop Backdrop',
-  flowfield: 'Flow Backdrop',
-};
-for (const [id, label] of Object.entries(visualOptions)) {
-  const option = node('option', '', label);
+
+for (const id of SHADER_SCENES) {
+  const option = node('option', '', sceneInfo[id]?.name || id);
   option.value = id;
   visualMode.append(option);
 }
 function refreshVisualMode() {
-  immersive.classList.toggle(
-    'milkdrop-layout',
-    visualPreset === 'milkdrop' || visualPreset === 'flowfield'
-  );
-  immersive.classList.toggle('mandala-layout', visualPreset === 'mandala');
-  immersive.classList.toggle('rays-layout', visualPreset === 'rays');
-  immersive.classList.toggle('starburst-layout', visualPreset === 'starburst');
-  immersive.classList.toggle('bars-layout', visualPreset === 'centerbars');
+  immersive.classList.add('shader-layout');
   visualMode.value = visualPreset;
-  visualMode.title = 'Выбрать визуализацию';
   visualMode.setAttribute('aria-label', 'Визуализация');
+  visualSettingsName.textContent = sceneInfo[visualPreset]?.name || '';
+  for (const card of sceneGrid.children)
+    card.classList.toggle('active', card.dataset.scene === visualPreset);
+  for (const chip of paletteRow.children)
+    chip.classList.toggle('active', chip.dataset.palette === visualPalette);
+}
+function setVisualPreset(id) {
+  if (!SHADER_SCENES.includes(id) || id === visualPreset) return;
+  visualPreset = id;
+  localStorage.setItem('visual-preset', id);
+  refreshVisualMode();
+  showSceneCaption();
 }
 refreshVisualMode();
-visualMode.onchange = () => {
-  visualPreset = visualMode.value;
-  localStorage.setItem('visual-preset', visualPreset);
-  refreshVisualMode();
-};
+// Список сцен скрыт, но через него сцену меняют экран «Настройки» и самопроверка.
+visualMode.onchange = () => setVisualPreset(visualMode.value);
+
 window.runImmersiveTest = async () => {
   $('mini-cover').click();
   await new Promise((r) => setTimeout(r, 1200));
   const checks = {
     opens: !immersive.classList.contains('hidden'),
-    cover: !!immersiveArt.querySelector('img')?.naturalWidth,
+    cover: !!immersiveArt.querySelector('img,.generated-art'),
     title: immersiveTitle.textContent === current?.title,
     canvas: visualCanvas.width > 0 && visualPaints > 0,
-    separateCanvas:
-      visualPanel.classList.contains('visual-panel') &&
-      getComputedStyle(visualPanel).position === 'relative',
+    sceneIsBackground: getComputedStyle(visualPanel).position === 'absolute',
+    settingsHiddenByDefault: visualSettings.classList.contains('hidden'),
+    sixScenes: visualMode.options.length === 6 && SHADER_SCENES.length === 6,
   };
-  const presetBefore = visualPreset;
-  visualMode.value = presetBefore === 'cover' ? 'mandala' : 'cover';
-  visualMode.dispatchEvent(new Event('change'));
-  checks.modeSwitch = visualPreset !== presetBefore;
-  visualPreset = 'mandala';
-  refreshVisualMode();
+  visualSettingsButton.click();
+  checks.settingsOpen = !visualSettings.classList.contains('hidden');
+  dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  checks.escapeClosesSettingsFirst =
+    visualSettings.classList.contains('hidden') && !immersive.classList.contains('hidden');
   dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   checks.escapeCloses = immersive.classList.contains('hidden');
   openImmersive();
   await start();
   await new Promise((r) => setTimeout(r, 900));
   checks.reactsToAudio = levels.some((x) => x > 0.05);
-  checks.mandalaRendered = mandalaBackground.frames > 0;
-  checks.mandalaSelected = visualPreset === 'mandala';
+  showBoth.click();
+  checks.bothShowsSceneAndLyrics =
+    !visualPanel.classList.contains('hidden') &&
+    !listeningLyrics.classList.contains('hidden') &&
+    !listeningControls.classList.contains('hidden');
+  showLyrics.click();
+  checks.lyricsHidesScene = visualPanel.classList.contains('hidden');
+  showVisual.click();
   const artBounds = immersiveArt.getBoundingClientRect(),
     visualBounds = visualCanvas.getBoundingClientRect();
-  checks.noCoverOverlap = artBounds.right <= visualBounds.left;
+  // Сцена теперь фон всего экрана: проверяем, что обложка лежит поверх неё, а не под ней.
+  const coverHit = document.elementFromPoint(
+    artBounds.left + artBounds.width / 2,
+    artBounds.top + artBounds.height / 2
+  );
+  checks.coverAboveScene =
+    !!coverHit && !visualPanel.contains(coverHit) && immersiveInfo.contains(coverHit);
+  checks.sceneFillsBackground = visualBounds.right >= immersive.getBoundingClientRect().right - 1;
   checks.visualizerSpace = visualBounds.width > 400 && visualBounds.height > 300;
-  checks.dropdown = visualMode.tagName === 'SELECT' && visualMode.options.length === 7;
-  checks.noCyanOption = ![...visualMode.options].some((o) => o.value === 'cyan');
-  for (const key of ['rays', 'starburst', 'centerbars', 'cover', 'milkdrop', 'flowfield']) {
+  const before = visualPreset;
+  for (const key of SHADER_SCENES) {
     visualMode.value = key;
     visualMode.dispatchEvent(new Event('change'));
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 600));
     checks[key + 'Selected'] = visualPreset === key;
-    if (key === 'milkdrop') {
-      await new Promise((r) => setTimeout(r, 2500));
-      checks.milkdropEngine =
-        !!milkdropBackground.mode?.gl &&
-        !!milkdropBackground.mode?.preset &&
-        !milkdropBackground.mode?.error;
-      checks.milkdropFrames = milkdropBackground.mode?.frameNo > 10;
-    } else if (key === 'rays') checks.raysRendered = raysScene.frames > 10 && !raysScene.error;
-    else if (key !== 'cover') checks[key + 'Rendered'] = importedSceneRenderer.frames[key] > 0;
+    checks[key + 'Rendered'] = (shaderScene.frames[key] || 0) > 10 && !shaderScene.failed[key];
   }
-  visualMode.value = 'mandala';
-  visualMode.dispatchEvent(new Event('change'));
+  setVisualPreset(before);
   return { ok: Object.values(checks).every(Boolean), checks };
 };

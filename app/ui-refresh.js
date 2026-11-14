@@ -211,7 +211,7 @@
     e.setAttribute('aria-hidden', 'true');
     return e;
   }
-  const GENERATED_FOR = /(^|\s)(track-cover|album-art|home-art)(\s|$)/;
+  const GENERATED_FOR = /(^|\s)(track-cover|album-art|home-art|immersive-image)(\s|$)/;
   const artBeforeRefresh = art;
   art = function (t, cls) {
     if (!t?.cover && !t?.customCover && GENERATED_FOR.test(cls || ''))
@@ -219,6 +219,21 @@
     return artBeforeRefresh(t, cls);
   };
   window.generatedCover = generatedCover;
+  // У трека без обложки цвета визуализации и фона берём из его сгенерированной обложки,
+  // а не серые запасные: иначе на экране фиолетовая обложка, а сцены — серые.
+  const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const setPaletteBeforeRefresh = setPalette;
+  setPalette = function (t) {
+    if (t && !t.cover && !t.customCover) {
+      const seed = coverHash(
+          (meaningfulAlbum(t) ? t.album + '\0' : t.title + '\0') + (t.artist || '')
+        ),
+        [a, b] = COVER_PALETTES[seed % COVER_PALETTES.length].map(hexToRgb);
+      applyCoverPalette([a, b, a.map((v, i) => Math.round((v + b[i]) / 2))]);
+      return;
+    }
+    setPaletteBeforeRefresh(t);
+  };
 
   // ——— Перемотка ———
   const seek = document.getElementById('seek'),
@@ -513,6 +528,7 @@
     [['Alt', '←'], 'Назад'],
     [['Alt', '[', ']'], 'Текст позже / раньше на 50 мс (с Shift — 250 мс)'],
     [['Alt', '\\'], 'Сбросить сдвиг текста'],
+    [['1', '…', '6'], 'Сцена визуализации на экране трека'],
     [['Esc'], 'Выйти из полноэкранного режима'],
     [['?'], 'Эта шпаргалка'],
   ];
