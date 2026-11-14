@@ -259,5 +259,5 @@ module.exports = function setup({ app, ipcMain, getLibrary, save, send }) {
     return true;
   });
   app.on('before-quit', () => active?.child.kill());
-  return { restore, isAligning: (id) => active?.id === id };
+  return { restore, isBusy: () => !!active, isAligning: (id) => active?.id === id };
 };

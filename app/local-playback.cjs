@@ -98,4 +98,5 @@ module.exports = ({ app, ipcMain, getWindow, getLibrary, register }) => {
   app.on('before-quit', () => {
     for (const child of children) child.kill();
   });
+  return { isBusy: () => jobs.size > 0 };
 };

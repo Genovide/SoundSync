@@ -303,3 +303,60 @@
   font-size: 11px;
   color: #9c9a92;
 }
+
+/* Native-app interaction: keep selection in editable text only. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable='true'],
+[contenteditable='plaintext-only'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img {
+  -webkit-user-drag: none;
+}
+.storage-size {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted, #9ca5a8);
+  white-space: nowrap;
+}
+.storage-rows .settings-row {
+  gap: 18px;
+}
+
+#now-title {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+.pet-reset-box {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #f3919138;
+  border-radius: 12px;
+  background: #f3919107;
+}
+.pet-reset-warning {
+  margin: 0 0 9px;
+  color: #ffa7a7;
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+.pet-reset-button {
+  margin-top: 12px;
+  border-color: #f3919160;
+  color: #ffbbbb;
+}
+.pet-reset-button:hover {
+  background: #f3919115;
+}
+.pet-reset-box [role='alert']:empty {
+  display: none;
+}

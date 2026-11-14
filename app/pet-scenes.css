@@ -1,0 +1,134 @@
+.pet-character {
+  transform-box: view-box;
+  transform-origin: 50% 96%;
+}
+.pet-turn {
+  transform-box: view-box;
+  transform-origin: 50% 60%;
+}
+.pet-head-rest,
+.pet-head-motion {
+  transform-box: view-box;
+  transform-origin: 45% 63%;
+}
+.pet-ear-left {
+  transform-box: view-box;
+  transform-origin: 146px 82px;
+}
+.pet-ear-right {
+  transform-box: view-box;
+  transform-origin: 146px 82px;
+}
+.pet-tail {
+  transform-box: view-box;
+  transform-origin: 64% 87%;
+}
+.pet-body {
+  transform-box: view-box;
+  transform-origin: 45% 96%;
+}
+.pet-mouth,
+.pet-effect {
+  opacity: 0;
+  pointer-events: none;
+}
+.pet-lids {
+  opacity: 1;
+  pointer-events: none;
+}
+.pet-effect {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.pet-choreographed .pet-head-motion,
+.pet-choreographed[data-pet-reaction] .pet-raster,
+.pet-choreographed[data-pet-reaction] .pet-paw {
+  animation: none !important;
+}
+.pet-choreographed[data-pet-reaction]::after {
+  content: none !important;
+}
+.pet-choreographed[data-pet-pose='transition'] .pose-curl,
+.pet-choreographed[data-pet-pose='transition'] .pose-sit {
+  display: inline !important;
+}
+.pet-choreographed[data-pet-pose='curl'] .pose-curl {
+  display: inline !important;
+}
+.pet-choreographed[data-pet-pose='curl'] .pose-sit {
+  display: none !important;
+}
+.pet-choreographed[data-pet-pose='sit'] .pose-sit {
+  display: inline !important;
+}
+.pet-choreographed[data-pet-pose='sit'] .pose-curl {
+  display: none !important;
+}
+.pet-choreographed[data-pet-pose='transition'] .pose-curl {
+  animation: none;
+}
+.pet-head-rest {
+  transition: transform 0.6s ease-in-out;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(.playing, .pet-listening) .pet-head-rest {
+    animation: pet-music-rest 0.8s ease-in-out infinite;
+  }
+  .pet-choreographed[data-pet-volume='quiet'] .pet-head-rest {
+    animation: pet-soft-rest 1.1s ease-in-out infinite;
+  }
+  .pet-choreographed[data-pet-volume='lively'] .pet-head-rest {
+    animation-duration: 0.72s;
+  }
+  .pet-choreographed[data-pet-reaction] .pet-head-rest {
+    animation-play-state: paused;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-head-rest {
+    transition: none;
+  }
+}
+@keyframes pet-music-rest {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(3px) rotate(1deg);
+  }
+}
+
+.pet-ground-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.pet-scratch-arm,
+.pet-favorite-glow {
+  opacity: 0;
+  pointer-events: none;
+}
+.pet-scratch-paw {
+  transform-box: view-box;
+}
+.pet-favorite-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.pet-choreographed[data-pet-volume='quiet']:not([data-pet-reaction]) .pet-ear-left {
+  transform: skewX(3deg) scaleY(0.96);
+}
+.pet-choreographed[data-pet-volume='quiet']:not([data-pet-reaction]) .pet-ear-right {
+  transform: skewX(-3deg) scaleY(0.96);
+}
+@keyframes pet-soft-rest {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(1.5px) rotate(0.5deg);
+  }
+}

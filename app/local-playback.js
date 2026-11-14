@@ -27,7 +27,7 @@
           if (current?.id !== track.id || !audio.src.includes(track.id + '-decoded')) return;
           if (position > 0)
             audio.currentTime = Math.min(position, Math.max(0, audio.duration - 0.01));
-          start();
+          if (!window.SoundSyncResume?.awaitingUserPlay) start();
         },
         { once: true }
       );
