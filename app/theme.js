@@ -12,7 +12,7 @@ function setFlatTheme(flat) {
   window.lumen.themeSet(flat).catch(() => {});
 }
 themeSwitch.onclick = () => setFlatTheme(!document.body.classList.contains('flat-theme'));
-document.querySelector('.sidebar-bottom').prepend(themeSwitch);
+// Кнопки в боковой панели больше нет: градиенты включаются в «Настройках» → «Внешний вид».
 setFlatTheme(
   typeof window.initialFlatTheme === 'boolean'
     ? window.initialFlatTheme
