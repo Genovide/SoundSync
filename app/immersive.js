@@ -44,9 +44,13 @@ const viewSwitch = node('div', 'listening-switch');
 viewSwitch.setAttribute('role', 'tablist');
 viewSwitch.setAttribute('aria-label', 'Экран трека');
 const showVisual = node('button', 'listening-tab active', 'Визуализация'),
+  showBoth = node('button', 'listening-tab', 'Вместе'),
   showLyrics = node('button', 'listening-tab', 'Текст песни');
+showBoth.title = 'Визуализация + текст песни';
+const viewTabs = [showVisual, showBoth, showLyrics];
 for (const [button, id, panel] of [
   [showVisual, 'visual-view-tab', 'visual-panel'],
+  [showBoth, 'both-view-tab', 'visual-panel listening-lyrics'],
   [showLyrics, 'lyrics-view-tab', 'listening-lyrics'],
 ]) {
   button.id = id;
@@ -117,17 +121,26 @@ function restoreListeningContent() {
   listeningHomes.clear();
   panelTab(sidebarLyrics);
 }
+// Три режима: только сцена, сцена с текстом поверх («Вместе») и только текст.
 function setListeningView(mode) {
-  listeningView = mode === 'lyrics' ? 'lyrics' : 'visual';
-  const lyrics = listeningView === 'lyrics';
+  listeningView = ['lyrics', 'both'].includes(mode) ? mode : 'visual';
+  const lyrics = listeningView !== 'visual',
+    scene = listeningView !== 'lyrics';
+  // Запоминаем выбор между сценой и «Вместе», чтобы экран трека открывался так же.
+  if (scene)
+    try {
+      localStorage.setItem('listening-view', listeningView);
+    } catch {}
   document.body.classList.toggle('lyrics-focus', lyrics);
-  immersive.classList.toggle('showing-lyrics', lyrics);
-  visualPanel.classList.toggle('hidden', lyrics);
+  immersive.classList.toggle('showing-lyrics', listeningView === 'lyrics');
+  immersive.classList.toggle('showing-both', listeningView === 'both');
+  visualPanel.classList.toggle('hidden', !scene);
   listeningLyrics.classList.toggle('hidden', !lyrics);
-  listeningControls.classList.toggle('hidden', lyrics);
+  listeningControls.classList.toggle('hidden', !scene);
   for (const [button, active] of [
-    [showVisual, !lyrics],
-    [showLyrics, lyrics],
+    [showVisual, listeningView === 'visual'],
+    [showBoth, listeningView === 'both'],
+    [showLyrics, listeningView === 'lyrics'],
   ]) {
     button.classList.toggle('active', active);
     button.setAttribute('aria-selected', String(active));
@@ -143,14 +156,15 @@ function setListeningView(mode) {
 viewSwitch.addEventListener('keydown', (event) => {
   if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
   event.preventDefault();
-  const next =
-    event.key === 'Home'
-      ? showVisual
-      : event.key === 'End'
-        ? showLyrics
-        : document.activeElement === showVisual
-          ? showLyrics
-          : showVisual;
+  const at = Math.max(0, viewTabs.indexOf(document.activeElement)),
+    next =
+      event.key === 'Home'
+        ? viewTabs[0]
+        : event.key === 'End'
+          ? viewTabs[viewTabs.length - 1]
+          : viewTabs[
+              (at + (event.key === 'ArrowRight' ? 1 : viewTabs.length - 1)) % viewTabs.length
+            ];
   next.click();
   next.focus();
 });
@@ -184,9 +198,13 @@ function openImmersive() {
   }
   document.body.classList.add('track-focus');
   immersive.classList.remove('hidden');
-  setListeningView('visual');
+  let saved = 'visual';
+  try {
+    saved = localStorage.getItem('listening-view') === 'both' ? 'both' : 'visual';
+  } catch {}
+  setListeningView(saved);
   updateImmersive();
-  showVisual.focus();
+  (saved === 'both' ? showBoth : showVisual).focus();
 }
 function exitImmersive() {
   if (immersive.classList.contains('hidden')) return;
@@ -213,6 +231,7 @@ for (const id of ['mini-cover', 'now-cover']) {
 }
 closeImmersive.onclick = exitImmersive;
 showVisual.onclick = () => setListeningView('visual');
+showBoth.onclick = () => setListeningView('both');
 showLyrics.onclick = () => setListeningView('lyrics');
 const closeLyrics = closeImmersive;
 expand.onclick = openImmersive;
@@ -353,7 +372,7 @@ document.addEventListener('pointerdown', (event) => {
 addEventListener(
   'keydown',
   (event) => {
-    if (immersive.classList.contains('hidden') || listeningView !== 'visual') return;
+    if (immersive.classList.contains('hidden') || listeningView === 'lyrics') return;
     if (event.target.matches?.('input,textarea,select,[contenteditable]')) return;
     if (event.key === 'Escape' && !visualSettings.classList.contains('hidden')) {
       event.preventDefault();
@@ -531,6 +550,14 @@ window.runImmersiveTest = async () => {
   await start();
   await new Promise((r) => setTimeout(r, 900));
   checks.reactsToAudio = levels.some((x) => x > 0.05);
+  showBoth.click();
+  checks.bothShowsSceneAndLyrics =
+    !visualPanel.classList.contains('hidden') &&
+    !listeningLyrics.classList.contains('hidden') &&
+    !listeningControls.classList.contains('hidden');
+  showLyrics.click();
+  checks.lyricsHidesScene = visualPanel.classList.contains('hidden');
+  showVisual.click();
   const artBounds = immersiveArt.getBoundingClientRect(),
     visualBounds = visualCanvas.getBoundingClientRect();
   // Сцена теперь фон всего экрана: проверяем, что обложка лежит поверх неё, а не под ней.

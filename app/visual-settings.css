@@ -280,3 +280,35 @@
 #immersive.shader-layout .listening-lyrics {
   z-index: 2;
 }
+
+/* «Вместе»: сцена остаётся фоном, текст песни идёт поверх неё в правой колонке. Под текстом —
+   мягкое затемнение, чтобы строки читались на любой сцене; подпись сцены не мешает тексту. */
+#immersive.showing-both .listening-lyrics {
+  position: relative;
+  z-index: 2;
+}
+#immersive.showing-both .listening-lyrics::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, #0009, #0004 55%, transparent 100%);
+}
+#immersive.showing-both .listening-lyrics .lyrics,
+#immersive.showing-both .listening-lyrics #lyrics {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+#immersive.showing-both .lyric-line {
+  text-shadow:
+    0 2px 18px #000c,
+    0 0 2px #0008;
+}
+#immersive.showing-both .scene-caption {
+  display: none;
+}
+#immersive.showing-both .visual-canvas {
+  opacity: 0.85;
+}
