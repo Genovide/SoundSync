@@ -21,7 +21,11 @@ for (const [platform, arch] of [
   const payload = path.join(root, 'payload');
   fs.cpSync('app', path.join(payload, 'resources/app'), {
     recursive: true,
-    filter: (p) => !p.split(path.sep).includes('node_modules'),
+    // Передатчик самообновления — только для своей платформы: архивы не смешивают компоненты.
+    filter: (p) =>
+      !p.split(path.sep).includes('node_modules') &&
+      !(platform === 'macOS' && p.endsWith('install-windows.ps1')) &&
+      !(platform === 'Windows' && p.endsWith('install-mac.sh')),
   });
   fs.mkdirSync(path.join(payload, 'alignment'), { recursive: true });
   for (const name of fs.readdirSync('alignment'))
