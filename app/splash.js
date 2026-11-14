@@ -20,7 +20,11 @@
     );
   }
   // В тестовых прогонах заставка закрывала бы скриншоты проверок.
-  if (params.has('nosplash') || !video) {
+  let disabled = false;
+  try {
+    disabled = localStorage.getItem('splash-enabled') === '0';
+  } catch {}
+  if (params.has('nosplash') || !video || disabled) {
     splash.remove();
     return;
   }

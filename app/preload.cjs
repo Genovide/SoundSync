@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('lumen', {
   scMetadataSet: (id, patch) => ipcRenderer.invoke('sc-metadata-set', id, patch),
   rztPage: (payload) => ipcRenderer.invoke('rzt-page', payload),
   rztReviewsOpen: () => ipcRenderer.invoke('rzt-reviews-open'),
+  appVersion: () => ipcRenderer.sendSync('app-version'),
   updatesCheck: () => ipcRenderer.invoke('updates-check'),
   updatesOpen: () => ipcRenderer.invoke('updates-open'),
   updatesDownload: () => ipcRenderer.invoke('updates-download'),

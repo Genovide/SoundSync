@@ -244,6 +244,11 @@ REPLACED=true
 mv "$WORK/SoundSync.app" "$TARGET"
 INSTALLED=true
 done_step
+# Храним только одну резервную копию — только что созданную. Каждая весит около 1,6 ГБ,
+# и с обновлениями из приложения они копились бы незаметно.
+for previous in "$(dirname "$OLD")"/SoundSync-backup-*.app "${OLD%.app}"-backup-*.app; do
+  if [ -d "$previous" ] && [ "$previous" != "$BACKUP" ]; then rm -rf "$previous"; fi
+done
 
 say ''
 say "  ${G}${B}SoundSync $VERSION установлен:${N} $TARGET"

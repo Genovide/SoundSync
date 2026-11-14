@@ -100,7 +100,11 @@
       }
     })
     .catch(() => {});
+  let autoCheck = true;
+  try {
+    autoCheck = localStorage.getItem('updates-auto') !== '0';
+  } catch {}
   setTimeout(() => {
-    if (state === 'idle') check(true);
+    if (state === 'idle' && autoCheck) check(true);
   }, 6000);
 })();
