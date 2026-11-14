@@ -46,6 +46,7 @@ jobs:
           bash -n scripts/Upgrade-SoundSync.command
           bash -n scripts/Update-SoundSync.command
           bash -n app/self-update/install-mac.sh
+          bash -n scripts/make-dmg.sh
       - name: Pocket PWA
         working-directory: pwa
         run: |

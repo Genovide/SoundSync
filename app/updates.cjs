@@ -30,6 +30,31 @@ function checksumFor(sums, name) {
 }
 // Скачиваем только с GitHub. Для проверки на CI фид можно направить на локальный сервер
 // (SOUNDSYNC_UPDATE_FEED=http://127.0.0.1:…), тогда разрешён и он.
+// «Что нового» из описания релиза: раздел изменений до «Установки», без разметки Markdown.
+function releaseNotes(body, limit = 900) {
+  const lines = [];
+  for (const raw of String(body || '').split(/\r?\n/)) {
+    if (/^##\s+(Установка|Скачать|Проверка)/i.test(raw)) break;
+    let line = raw
+      .replace(/<!--.*?-->/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\*\*|__|`/g, '')
+      .trim();
+    if (!line || /^##\s/.test(line)) continue;
+    if (/^###\s+/.test(line)) line = line.replace(/^###\s+/, '').toLocaleUpperCase('ru');
+    else line = line.replace(/^[-*]\s+/, '• ');
+    lines.push(line);
+  }
+  let text = '';
+  for (const line of lines) {
+    if ((text + '\n' + line).length > limit) {
+      text += '\n…';
+      break;
+    }
+    text += (text ? '\n' : '') + line;
+  }
+  return text;
+}
 const trustedDownload = (url) => {
   const u = new URL(url),
     local = /^http:\/\/127\.0\.0\.1:\d+\//.test(process.env.SOUNDSYNC_UPDATE_FEED || '');
@@ -74,6 +99,9 @@ module.exports = function ({ app, ipcMain, shell, version, getWindow, fetchImpl 
       canInstall: available && canInstall() && hasAsset,
       ready: !!downloaded && downloaded.version === r.tag_name,
     };
+  });
+  ipcMain.on('app-version', (event) => {
+    event.returnValue = VERSION;
   });
   ipcMain.handle('updates-open', () =>
     shell.openExternal(`https://github.com/${REPO}/releases/latest`)
@@ -190,6 +218,7 @@ module.exports = function ({ app, ipcMain, shell, version, getWindow, fetchImpl 
     if (!fromRenderer(event)) throw Error('Unknown window');
     if (!downloaded) throw Error('Сначала скачай обновление');
     const { dialog } = require('electron');
+    const notes = releaseNotes(release?.body);
     // В сквозном тесте (SOUNDSYNC_SELF_UPDATE_TEST=1) окно подтверждения пропускается.
     const choice =
       process.env.SOUNDSYNC_SELF_UPDATE_TEST === '1'
@@ -202,6 +231,7 @@ module.exports = function ({ app, ipcMain, shell, version, getWindow, fetchImpl 
             title: 'Обновление SoundSync',
             message: `Установить SoundSync ${downloaded.version.replace(/^v/, '')}?`,
             detail:
+              (notes ? 'Что нового:\n' + notes + '\n\n' : '') +
               'SoundSync закроется, установит обновление и откроется снова — обычно это занимает меньше минуты. Музыка, медиатека и настройки сохранятся.',
           });
     if (choice.response !== 1) return { started: false };
@@ -244,3 +274,4 @@ module.exports = function ({ app, ipcMain, shell, version, getWindow, fetchImpl 
 module.exports.newer = newer;
 module.exports.assetName = assetName;
 module.exports.checksumFor = checksumFor;
+module.exports.releaseNotes = releaseNotes;

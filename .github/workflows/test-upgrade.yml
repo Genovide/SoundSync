@@ -148,8 +148,100 @@ jobs:
         with:
           name: macOS-upgrade-diagnostics
           path: dist/diagnostics/
+  windows-full:
+    # Полная установка для Windows: выпущенная 1.2.0 + проверенный апдейт → SoundSync-Setup-Windows-x64.exe.
+    needs: windows
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-Windows-update
+          path: dist
+      - name: Assemble the current full player
+        shell: powershell
+        run: |
+          curl.exe --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash base.zip).Hash.ToLowerInvariant() -ne '049857d0ec726d2112bc5156da8ba92ca50eb2dbd593b8e38360ebafb844081f') { throw 'Base checksum mismatch' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'base.zip'), (Join-Path $pwd 'work/base'))
+          $update = (Get-ChildItem dist -Filter 'SoundSync-*-Update-Windows-x64.zip').FullName
+          [IO.Compression.ZipFile]::ExtractToDirectory($update, (Join-Path $pwd 'work/patch'))
+          powershell -NoProfile -ExecutionPolicy Bypass -File work/patch/Update-SoundSync.ps1 -Root (Resolve-Path work/base/SoundSync).Path
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Remove-Item -LiteralPath work/base/SoundSync/Data -Recurse -Force -ErrorAction SilentlyContinue
+      - name: Build the installer
+        shell: powershell
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress; if ($LASTEXITCODE) { exit $LASTEXITCODE } }
+          $version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          & $iscc /Qp "/DAppVersion=$version" "/DSourceDir=$((Resolve-Path work/base/SoundSync).Path)" "/DOutputDir=$((Resolve-Path dist).Path)" build/installer/soundsync.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Install silently, check and uninstall
+        shell: powershell
+        run: |
+          $version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          $dir = Join-Path $pwd 'work/installed'
+          Start-Process dist/SoundSync-Setup-Windows-x64.exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$dir", '/TASKS=' -Wait
+          $installed = (Get-Content (Join-Path $dir 'resources/app/package.json') -Raw | ConvertFrom-Json).version
+          if ($installed -ne $version) { throw "Installed $installed, expected $version" }
+          if (!(Test-Path (Join-Path $dir 'SoundSync.exe'))) { throw 'SoundSync.exe missing' }
+          if (!(Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'SoundSync.lnk'))) { throw 'Start menu shortcut missing' }
+          Start-Process (Join-Path $dir 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES' -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path (Join-Path $dir 'SoundSync.exe')) { throw 'Uninstall left SoundSync.exe behind' }
+          Write-Host "Installer installed and removed SoundSync $installed"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-Windows-installer
+          path: dist/SoundSync-Setup-Windows-x64.exe
+  macos-full:
+    # Полная установка для Mac: выпущенная 1.2.0 + проверенный апдейт → DMG с фоном и «Программами».
+    needs: macos
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-macOS-update
+          path: dist
+      - name: Assemble the current full player
+        run: |
+          curl --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip
+          echo 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867  base.zip' | shasum -a 256 -c -
+          mkdir -p work/base work/patch
+          ditto -x -k base.zip work/base
+          ditto -x -k dist/SoundSync-*-Update-macOS-arm64.zip work/patch
+          bash work/patch/Update-SoundSync.command "$PWD/work/base/SoundSync.app"
+          rm -rf work/base/SoundSync-backup-*.app
+      - name: Build the DMG
+        run: bash scripts/make-dmg.sh work/base/SoundSync.app dist/SoundSync-macOS-arm64.dmg
+      - name: Check the DMG and capture its window
+        run: |
+          version=$(node -p "require('./app/package.json').version")
+          mount=$(hdiutil attach -noverify dist/SoundSync-macOS-arm64.dmg | awk -F'\t' '/\/Volumes\// {print $NF}' | tail -1)
+          test "$(node -p "require('$mount/SoundSync.app/Contents/Resources/app/package.json').version")" = "$version"
+          test -L "$mount/Applications"
+          codesign --verify --deep --strict "$mount/SoundSync.app"
+          open "$mount"; sleep 4
+          mkdir -p dist/diagnostics
+          screencapture -x dist/diagnostics/dmg-window.png || true
+          hdiutil detach "$mount" -force -quiet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-macOS-installer
+          path: dist/SoundSync-macOS-arm64.dmg
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macOS-dmg-diagnostics
+          path: dist/diagnostics/
   publish:
-    needs: [windows, macos]
+    needs: [windows, macos, windows-full, macos-full]
     if: inputs.publish
     runs-on: ubuntu-latest
     permissions:
@@ -161,10 +253,15 @@ jobs:
           pattern: verified-*-update
           path: dist
           merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: full-*-installer
+          path: dist
+          merge-multiple: true
       - name: Replace both tested update archives and their checksums
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 -c 'import pathlib,hashlib;p=pathlib.Path("dist");files=sorted(p.glob("SoundSync-1.2.11-Update-*.zip"));assert len(files)==2;(p/"SHA256SUMS.txt").write_text("".join(hashlib.sha256(f.read_bytes()).hexdigest()+"  "+f.name+"\n" for f in files))'
+          python3 -c 'import pathlib,hashlib;p=pathlib.Path("dist");files=sorted(p.glob("SoundSync-1.2.11-Update-*.zip"))+[p/"SoundSync-Setup-Windows-x64.exe",p/"SoundSync-macOS-arm64.dmg"];assert len(files)==4 and all(f.is_file() for f in files);(p/"SHA256SUMS.txt").write_text("".join(hashlib.sha256(f.read_bytes()).hexdigest()+"  "+f.name+"\n" for f in files))'
           test "$(gh release view v1.2.11 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
-          gh release upload v1.2.11 dist/SoundSync-1.2.11-Update-Windows-x64.zip dist/SoundSync-1.2.11-Update-macOS-arm64.zip dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload v1.2.11 dist/SoundSync-1.2.11-Update-Windows-x64.zip dist/SoundSync-1.2.11-Update-macOS-arm64.zip dist/SoundSync-Setup-Windows-x64.exe dist/SoundSync-macOS-arm64.dmg dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
