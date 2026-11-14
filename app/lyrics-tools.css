@@ -237,10 +237,6 @@
   pointer-events: auto;
   margin-top: 12px;
 }
-.bars-layout .current-track-menu {
-  grid-column: 2;
-  width: 34px;
-}
 .track-menu {
   position: fixed;
   z-index: 100;

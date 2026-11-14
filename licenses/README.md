@@ -6,7 +6,6 @@
 |---|---|
 | Electron | [Electron-LICENSE.txt](Electron-LICENSE.txt) |
 | PyTorch | [PYTORCH-LICENSE.txt](../build/PYTORCH-LICENSE.txt) |
-| SoundVisualizer | [LICENSE](../app/vendor/soundvisualizer/LICENSE) |
 
 Лицензия Electron перенесена сюда из корневого `LICENSE` без изменения текста. Уведомления об авторах сторонних компонентов сохранены. Зависимости также содержат собственные лицензии в своих дистрибутивах.
 
