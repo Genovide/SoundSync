@@ -114,13 +114,26 @@ function mountListeningContent() {
     target.append(element);
   }
 }
+// Текст песни возвращается в боковую панель, когда экран трека уже погас, а не посреди анимации.
+let restoreTimer = 0;
 function restoreListeningContent() {
+  clearTimeout(restoreTimer);
+  restoreTimer = 0;
   for (const [element, placeholder] of listeningHomes) {
     placeholder.replaceWith(element);
   }
   listeningHomes.clear();
   panelTab(sidebarLyrics);
 }
+// Подложка выбранной вкладки переезжает к ней (см. screen-motion.css).
+function placeTabPill() {
+  const active = viewTabs.find((button) => button.classList.contains('active'));
+  if (!active?.offsetWidth) return;
+  viewSwitch.style.setProperty('--tab-x', active.offsetLeft + 'px');
+  viewSwitch.style.setProperty('--tab-w', active.offsetWidth + 'px');
+  viewSwitch.classList.add('pill-ready');
+}
+addEventListener('resize', placeTabPill);
 // Три режима: только сцена, сцена с текстом поверх («Вместе») и только текст.
 function setListeningView(mode) {
   listeningView = ['lyrics', 'both'].includes(mode) ? mode : 'visual';
@@ -146,6 +159,7 @@ function setListeningView(mode) {
     button.setAttribute('aria-selected', String(active));
     button.tabIndex = active ? 0 : -1;
   }
+  placeTabPill();
   if (lyrics) {
     panelTab(true);
     requestAnimationFrame(() => {
@@ -194,7 +208,11 @@ function openImmersive() {
   }
   if (immersive.classList.contains('hidden')) {
     listeningReturnFocus = document.activeElement;
-    mountListeningContent();
+    // Если экран закрыли и сразу открыли, содержимое ещё на месте — переносить его не нужно.
+    if (restoreTimer) {
+      clearTimeout(restoreTimer);
+      restoreTimer = 0;
+    } else mountListeningContent();
   }
   document.body.classList.add('track-focus');
   immersive.classList.remove('hidden');
@@ -210,7 +228,9 @@ function exitImmersive() {
   if (immersive.classList.contains('hidden')) return;
   document.body.classList.remove('track-focus', 'lyrics-focus');
   immersive.classList.add('hidden');
-  restoreListeningContent();
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) restoreListeningContent();
+  else restoreTimer = setTimeout(restoreListeningContent, 300);
   if (listeningReturnFocus?.isConnected) listeningReturnFocus.focus();
   else $('mini-cover').focus();
 }
