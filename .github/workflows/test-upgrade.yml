@@ -189,6 +189,7 @@ jobs:
           $installed = (Get-Content (Join-Path $dir 'resources/app/package.json') -Raw | ConvertFrom-Json).version
           if ($installed -ne $version) { throw "Installed $installed, expected $version" }
           if (!(Test-Path (Join-Path $dir 'SoundSync.exe'))) { throw 'SoundSync.exe missing' }
+          ./scripts/Test-InstalledRuntime.ps1 -Root $dir -Source work/base/SoundSync
           if (!(Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'SoundSync.lnk'))) { throw 'Start menu shortcut missing' }
           Start-Process (Join-Path $dir 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES' -Wait
           Start-Sleep -Seconds 3

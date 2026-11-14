@@ -1,0 +1,73 @@
+name: Repair Windows installer payload
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Replace the Windows installer in the current published release
+        type: boolean
+        default: false
+permissions:
+  contents: write
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assemble from the published cumulative update
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version=(Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          curl.exe --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          if((Get-FileHash base.zip).Hash.ToLowerInvariant() -ne '049857d0ec726d2112bc5156da8ba92ca50eb2dbd593b8e38360ebafb844081f'){throw 'Base checksum mismatch'}
+          gh release download "v$version" --repo $env:GITHUB_REPOSITORY -p "SoundSync-$version-Update-Windows-x64.zip" -D dist
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          $release=gh release view "v$version" --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
+          $update=Get-Item "dist/SoundSync-$version-Update-Windows-x64.zip"
+          $asset=$release.assets | Where-Object {$_.name -eq $update.Name}
+          if('sha256:'+(Get-FileHash $update.FullName).Hash.ToLowerInvariant() -ne $asset.digest){throw 'Update checksum mismatch'}
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'base.zip'),(Join-Path $pwd 'work/base'))
+          [IO.Compression.ZipFile]::ExtractToDirectory($update.FullName,(Join-Path $pwd 'work/patch'))
+          powershell -NoProfile -ExecutionPolicy Bypass -File work/patch/Update-SoundSync.ps1 -Root (Resolve-Path work/base/SoundSync).Path
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          New-Item -ItemType Directory -Force work/base/SoundSync/Data | Out-Null
+          Set-Content work/base/SoundSync/Data/installer-private-data-sentinel.txt 'do-not-package'
+      - name: Build corrected installer
+        shell: powershell
+        run: |
+          $compiler=Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if(!(Test-Path $compiler)){choco install innosetup -y --no-progress;if($LASTEXITCODE){exit $LASTEXITCODE}}
+          $version=(Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          & $compiler /Qp "/DAppVersion=$version" "/DSourceDir=$((Resolve-Path work/base/SoundSync).Path)" "/DOutputDir=$((Resolve-Path dist).Path)" build/installer/soundsync.iss
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+      - name: Check the actual installed payload
+        shell: powershell
+        run: |
+          $directory=Join-Path $pwd 'work/installed'
+          $setup=Start-Process dist/SoundSync-Setup-Windows-x64.exe -WindowStyle Hidden -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$directory",'/TASKS=' -Wait -PassThru
+          if($setup.ExitCode -ne 0){throw "Installer exit code: $($setup.ExitCode)"}
+          if(Test-Path (Join-Path $directory 'Data/installer-private-data-sentinel.txt')){throw 'Root user Data leaked into installer'}
+          ./scripts/Test-InstalledRuntime.ps1 -Root $directory -Source work/base/SoundSync
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repaired-Windows-installer
+          path: dist/SoundSync-Setup-Windows-x64.exe
+          compression-level: 0
+      - name: Replace installer and release checksums
+        if: inputs.publish
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version=(Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          gh release upload "v$version" dist/SoundSync-Setup-Windows-x64.exe --repo $env:GITHUB_REPOSITORY --clobber
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          python scripts/refresh-installer-release.py
+          if($LASTEXITCODE){exit $LASTEXITCODE}
