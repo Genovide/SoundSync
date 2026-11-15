@@ -148,6 +148,8 @@ function renderOnline() {
       row.tabIndex = 0;
       row.setAttribute('role', 'button');
       row.setAttribute('aria-label', t.title + ' — ' + t.artist);
+      row.addEventListener('pointerenter', () => warmOnline(t.id));
+      row.addEventListener('focus', () => warmOnline(t.id));
       text.append(node('div', 'track-name', t.title), node('div', 'track-artist', t.artist));
       info.append(art(t, 'track-cover'), text);
       download.append(icon(downloadBusy.has(t.id) ? 'sync' : 'download'));
@@ -844,6 +846,19 @@ window.runOnlineRowTest = () => {
   }
 };
 
+// Трек под курсором прогревается заранее (ссылка, плейлист и начало), чтобы клик играл сразу.
+// Задержка отсекает случайные пролёты мыши по списку.
+let warmTimer = 0;
+const warmedAt = new Map();
+function warmOnline(id) {
+  clearTimeout(warmTimer);
+  if (Date.now() - (warmedAt.get(id) || 0) < 120000) return;
+  warmTimer = setTimeout(() => {
+    warmedAt.set(id, Date.now());
+    if (warmedAt.size > 60) warmedAt.delete(warmedAt.keys().next().value);
+    window.lumen.scPrefetch(id).catch(() => warmedAt.delete(id));
+  }, 180);
+}
 // Prepare only metadata/stream URLs, never a second audio player or audio download.
 let preparedNext = '',
   preparedNextAt = 0;
