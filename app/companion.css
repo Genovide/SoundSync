@@ -228,11 +228,26 @@
 }
 .pet-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin: 17px 0;
 }
 .pet-actions > button {
-  flex: 1;
+  flex: 1 1 calc(50% - 9px);
+}
+.pet-toy-ball {
+  position: absolute;
+  left: 77%;
+  top: 82%;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 3px solid #553c27;
+  border-radius: 50%;
+  background: #ffd564;
+  box-shadow: inset -4px -3px #d98c45;
+  pointer-events: none;
+  z-index: 2;
 }
 .pet-primary {
   background: var(--accent);
@@ -447,7 +462,7 @@
 }
 .player-pet-speech {
   position: absolute;
-  top: 0;
+  top: 36px;
   left: 50%;
   transform: translateX(-50%);
   box-sizing: border-box;
@@ -588,3 +603,22 @@
 .player-pet-speech:not([data-message]) {
   visibility: hidden;
 }
+.pet-bubble[hidden],
+.player-pet-speech[hidden] {
+  display: none;
+}
+
+/* A flat, even plinth and a hard animal contour replace the blurred halo. */
+.pet-stage .pet-platform {
+  box-sizing: border-box;
+  width: min(280px, calc(100% - 48px));
+  height: 42px;
+  bottom: 22px;
+  border: 1px solid #ffffff24;
+  border-radius: 10px;
+  background: #ffffff03;
+  box-shadow: none;
+  transform: none;
+}
+.pet-creature { filter: none; }
+.pet-raster .pet-ground-shadow { display: none; }

@@ -59,7 +59,8 @@
   const strokeButton = button('♡ Погладить', () => stroke());
   const gameButton = button('♫ Ловить ноты', () => startGame(), 'pet-primary');
   const treatButton = button('✦ Угостить · 5 нот', () => act({ type: 'treat' }));
-  actions.append(strokeButton, gameButton, treatButton);
+  const ballButton = button('● Бросить мячик', () => playBall());
+  actions.append(strokeButton, gameButton, treatButton, ballButton);
   const gameBoard = el('div', 'pet-game');
   gameBoard.hidden = true;
   const gameLabel = el('div', 'pet-game-label');
@@ -92,7 +93,10 @@
   for (const [id, label, required] of [
     ['none', 'Без всего', 1],
     ['headphones', 'Наушники', 1],
+    ['glasses', 'Очки', 1],
+    ['bow', 'Бабочка · ур. 2', 2],
     ['star', '✦ Звезда · ур. 3', 3],
+    ['bandana', 'Бандана · ур. 4', 4],
     ['crown', '♛ Корона · ур. 5', 5],
   ]) {
     const b = button(label, () => act({ type: 'accessory', id }));
@@ -145,6 +149,7 @@
   speech.setAttribute('role', 'status');
   tools.append(
     button('Меню', open),
+    button('Мячик', () => playBall()),
     button('Скрыть', () => visible(false))
   );
   widget.append(speech, face, tools);
@@ -220,9 +225,22 @@
     bubbleTimer = setTimeout(() => ambient(), 5500);
   }
   function speak(text) {
+    if (localStorage.getItem('pet-speech-enabled') === 'false') return;
     window.SoundSyncPetSpeak(bubble, text);
     window.SoundSyncPetSpeak(speech, text);
   }
+  function updateSpeechPreference() {
+    const muted = localStorage.getItem('pet-speech-enabled') === 'false';
+    bubble.hidden = speech.hidden = muted;
+    if (muted) {
+      clearTimeout(bubbleTimer);
+      window.SoundSyncPetSpeak(bubble, '');
+      window.SoundSyncPetSpeak(speech, '');
+    } else ambient();
+  }
+  window.addEventListener('pet-speech-preference', updateSpeechPreference);
+  // Apply visibility before the first phrase; ambient needs the player state below.
+  bubble.hidden = speech.hidden = localStorage.getItem('pet-speech-enabled') === 'false';
   let ambientCount = 0;
   function sayEvent(event) {
     say(window.SoundSyncPetPhrases.pick(pet?.species, event));
@@ -320,6 +338,42 @@
   async function stroke() {
     await act({ type: 'stroke' });
   }
+  let toyAnimations = [], toyBalls = [];
+  function stopToy() {
+    toyAnimations.forEach((animation) => animation.cancel());
+    toyBalls.forEach((ball) => ball.remove());
+    toyAnimations = [];
+    toyBalls = [];
+    ballButton.disabled = false;
+  }
+  function playBall() {
+    if (!pet?.species || toyAnimations.length || resetBusy) return;
+    if (!react('ball')) return;
+    ballButton.disabled = true;
+    say('Лови! Ещё разок? ●');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (const host of [face, creature]) {
+      if (!host.getClientRects().length) continue;
+      const ball = el('span', 'pet-toy-ball');
+      ball.setAttribute('aria-hidden', 'true');
+      host.append(ball);
+      toyBalls.push(ball);
+      const size = host.clientWidth;
+      const animation = ball.animate(reduced ? [{ opacity: 1 }, { opacity: 0 }] : [
+        { transform: 'translate(0,0) rotate(0deg)', opacity: 0, offset: 0 },
+        { transform: `translate(${-size * .12}px,${-size * .3}px) rotate(-100deg)`, opacity: 1, offset: .22 },
+        { transform: `translate(${-size * .35}px,0) rotate(-220deg)`, opacity: 1, offset: .5 },
+        { transform: `translate(${-size * .16}px,${-size * .18}px) rotate(-60deg)`, opacity: 1, offset: .7 },
+        { transform: `translate(${size * .12}px,0) rotate(120deg)`, opacity: 0, offset: 1 },
+      ], { duration: 2100, easing: 'ease-in-out', fill: 'forwards' });
+      toyAnimations.push(animation);
+    }
+    const currentThrow = toyAnimations;
+    Promise.allSettled(currentThrow.map((animation) => animation.finished)).then(() => {
+      // A cancelled previous throw must not clear a newer one.
+      if (toyAnimations === currentThrow) stopToy();
+    });
+  }
   async function exportPet() {
     try {
       if (await window.lumen.petExport()) say('Я в файле. Можно брать меня с собой!');
@@ -328,6 +382,7 @@
     }
   }
   function replacePet(next) {
+    stopToy();
     petEpoch++;
     busy = false;
     errorsShown = false;
@@ -439,6 +494,7 @@
     }
   }
   dialog.addEventListener('close', stopGame);
+  dialog.addEventListener('close', stopToy);
   async function open() {
     if (!dialog.open) dialog.showModal();
     const epoch = petEpoch;

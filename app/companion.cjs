@@ -25,7 +25,7 @@ function validate(value) {
     !Array.isArray(p.tracks) ||
     p.tracks.length > 2000 ||
     !p.tracks.every((id) => typeof id === 'string' && id.length <= 240) ||
-    !['none', 'headphones', 'star', 'crown'].includes(p.accessory) ||
+    !['none', 'headphones', 'star', 'crown', 'glasses', 'bow', 'bandana'].includes(p.accessory) ||
     !['calm', 'energy', 'dream'].every((k) => integer(p.taste?.[k]))
   )
     throw Error('Файл питомца повреждён или содержит неверные данные.');
@@ -296,7 +296,7 @@ module.exports = ({ app, ipcMain, dialog, getWindow, getTrack }) => {
         throw Error('Имя: от 1 до 30 символов');
       p.name = value.name.trim();
     } else if (value?.type === 'accessory') {
-      const required = { none: 1, headphones: 1, star: 3, crown: 5 }[value.id];
+      const required = { none: 1, headphones: 1, glasses: 1, bow: 2, star: 3, bandana: 4, crown: 5 }[value.id];
       if (!required || info().level < required) throw Error('Этот аксессуар пока не открыт');
       p.accessory = value.id;
     } else throw Error('Неизвестное действие');

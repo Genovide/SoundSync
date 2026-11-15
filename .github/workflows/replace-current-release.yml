@@ -1,0 +1,88 @@
+name: Replace current release (build only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: soundsync-cumulative-release
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - platform: Windows
+            os: windows-latest
+          - platform: macOS
+            os: macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Package cumulative update
+        env:
+          SOUNDSYNC_UPDATE_PLATFORM: ${{ matrix.platform }}
+          SOUNDSYNC_PYTHON: python
+        run: node scripts/build-upgrades.mjs
+      - name: Assemble Windows installation
+        if: matrix.platform == 'Windows'
+        shell: pwsh
+        run: |
+          curl.exe --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Expand-Archive base.zip work/base
+          $update = (Get-ChildItem dist -Filter '*-Update-Windows-x64.zip').FullName
+          Expand-Archive $update work/patch
+          Copy-Item work/patch/payload/* work/base/SoundSync -Recurse -Force
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (!(Test-Path $compiler)) { choco install innosetup -y --no-progress; if ($LASTEXITCODE) { exit $LASTEXITCODE } }
+          $version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          & $compiler /Qp "/DAppVersion=$version" "/DSourceDir=$((Resolve-Path work/base/SoundSync).Path)" "/DOutputDir=$((Resolve-Path dist).Path)" build/installer/soundsync.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Assemble macOS installation
+        if: matrix.platform == 'macOS'
+        run: |
+          curl --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip
+          mkdir -p work/base work/patch
+          ditto -x -k base.zip work/base
+          ditto -x -k dist/SoundSync-*-Update-macOS-arm64.zip work/patch
+          ditto work/patch/payload/resources/app work/base/SoundSync.app/Contents/Resources/app
+          ditto work/patch/payload/alignment work/base/SoundSync.app/Contents/Resources/alignment
+          version=$(node -p "require('./app/package.json').version")
+          /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" work/base/SoundSync.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Set CFBundleVersion $version" work/base/SoundSync.app/Contents/Info.plist
+          codesign --force --deep --sign - work/base/SoundSync.app
+          bash scripts/make-dmg.sh work/base/SoundSync.app dist/SoundSync-macOS-arm64.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replacement-${{ matrix.platform }}
+          compression-level: 0
+          path: |
+            dist/*-Update-*.zip
+            dist/*.exe
+            dist/*.dmg
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: replacement-*
+          path: dist
+          merge-multiple: true
+      - name: Replace existing release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./app/package.json').version")
+          sha256sum dist/*-Update-*.zip dist/*.exe dist/*.dmg | sed 's|dist/||' > dist/SHA256SUMS.txt
+          gh release upload "v$version" dist/*-Update-*.zip dist/*.exe dist/*.dmg dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/v$version" -f sha="$GITHUB_SHA" -F force=true
+          gh release edit "v$version" --repo "$GITHUB_REPOSITORY" --notes-file "docs/releases/$version.md" --target "$GITHUB_SHA"

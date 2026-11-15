@@ -95,7 +95,7 @@
     transform: none;
   }
   50% {
-    transform: translateY(3px) rotate(1deg);
+    transform: translateY(7px) rotate(4deg);
   }
 }
 
@@ -129,6 +129,6 @@
     transform: none;
   }
   50% {
-    transform: translateY(1.5px) rotate(0.5deg);
+    transform: translateY(4px) rotate(2.5deg);
   }
 }

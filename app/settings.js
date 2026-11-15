@@ -268,6 +268,12 @@
     'Хранится в пользовательских данных и переживает обновления. Экспорт позволяет перенести его на другой компьютер.'
   );
   const petControls = el('div', 'settings-inline');
+  const petSpeech = toggle(store.get('pet-speech-enabled', 'true') !== 'false', (enabled) => {
+    store.set('pet-speech-enabled', String(enabled));
+    window.dispatchEvent(new Event('pet-speech-preference'));
+  });
+  petSpeech.input.setAttribute('aria-label', 'Реплики питомца');
+  row(petSection, 'Реплики питомца', petSpeech.wrap, 'Показывать фразы над питомцем.');
   petControls.append(
     button('Открыть питомца', () => {
       dialog.close();

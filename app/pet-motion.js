@@ -3,6 +3,7 @@
   const typing = new WeakMap();
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const reactionsInfo = {
+    ball: [2000, 90],
     love: [1800, 85],
     treat: [2200, 85],
     track: [1800, 50],
