@@ -116,15 +116,28 @@ function animal(pet) {
       '</g>';
     if (pet.accessory === 'glasses')
       return group(
-        '<g transform="translate(0 ' + (pose === 'sleep' ? 39 : 25) + ')" stroke="#242434" stroke-width="4" stroke-linejoin="miter"><path d="M-39-10H-7V12H-35L-39 5ZM7-10H39V5L35 12H7Z" fill="#263d59"/><path d="M-7-4H7M-46-7H-39M39-7H46" fill="none"/><path d="M-32-5H-18M14-5H28" stroke="#a5dce9" stroke-width="3"/></g>'
+        '<g transform="translate(0 ' +
+          (pose === 'sleep' ? 39 : 25) +
+          ')" stroke="#242434" stroke-width="4" stroke-linejoin="miter"><path d="M-39-10H-7V12H-35L-39 5ZM7-10H39V5L35 12H7Z" fill="#263d59"/><path d="M-7-4H7M-46-7H-39M39-7H46" fill="none"/><path d="M-32-5H-18M14-5H28" stroke="#a5dce9" stroke-width="3"/></g>'
       );
     if (pet.accessory === 'bow' || pet.accessory === 'bandana') {
       const cx = pose === 'sleep' ? x + 35 : x;
       const cy = pose === 'sleep' ? neck + 4 : neck;
-      const shape = pet.accessory === 'bow'
-        ? '<path d="M-4-2-22-12V12L-4 3M4-2 22-12V12L4 3" fill="#ba6dc5" stroke="#59375f" stroke-width="3"/><rect x="-5" y="-5" width="10" height="10" rx="2" fill="#efb4ec" stroke="#59375f" stroke-width="2"/>'
-        : '<path d="M-31-7H31L4 22H-4Z" fill="#df7059" stroke="#703c38" stroke-width="3"/><path d="M-20-2H19M-10 7H10" stroke="#ffd498" stroke-width="3"/>';
-      return '<g class="pet-accessory pet-accessory-' + pet.accessory + '" transform="translate(' + cx + ' ' + cy + ')">' + shape + '</g>';
+      const shape =
+        pet.accessory === 'bow'
+          ? '<path d="M-4-2-22-12V12L-4 3M4-2 22-12V12L4 3" fill="#ba6dc5" stroke="#59375f" stroke-width="3"/><rect x="-5" y="-5" width="10" height="10" rx="2" fill="#efb4ec" stroke="#59375f" stroke-width="2"/>'
+          : '<path d="M-31-7H31L4 22H-4Z" fill="#df7059" stroke="#703c38" stroke-width="3"/><path d="M-20-2H19M-10 7H10" stroke="#ffd498" stroke-width="3"/>';
+      return (
+        '<g class="pet-accessory pet-accessory-' +
+        pet.accessory +
+        '" transform="translate(' +
+        cx +
+        ' ' +
+        cy +
+        ')">' +
+        shape +
+        '</g>'
+      );
     }
     if (pet.accessory === 'crown')
       return group(
@@ -180,7 +193,9 @@ function animal(pet) {
     '"/></feComponentTransfer></filter>';
   // A hard silhouette stroke follows the composed animal, never its rectangular image.
   const outline =
-    '<filter id="' + prefix + 'outline" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">' +
+    '<filter id="' +
+    prefix +
+    'outline" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">' +
     '<feMorphology in="SourceAlpha" operator="dilate" radius="2" result="edge"/>' +
     '<feFlood flood-color="#08080a" result="ink"/><feComposite in="ink" in2="edge" operator="in" result="stroke"/>' +
     '<feMerge><feMergeNode in="stroke"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
@@ -191,7 +206,11 @@ function animal(pet) {
         prefix +
         'silhouette-' +
         pose +
-        '" clipPathUnits="userSpaceOnUse"><path id="' + prefix + 'contour-' + pose + '" d="' +
+        '" clipPathUnits="userSpaceOnUse"><path id="' +
+        prefix +
+        'contour-' +
+        pose +
+        '" d="' +
         window.SoundSyncPetSilhouettes[pet.species][pose] +
         '" shape-rendering="crispEdges"/></clipPath>'
     )
@@ -384,7 +403,9 @@ function animal(pet) {
     prefix +
     'love"><stop stop-color="#ff9fb8" stop-opacity=".24"/><stop offset="1" stop-color="#ff9fb8" stop-opacity="0"/></radialGradient></defs><ellipse class="pet-favorite-glow" cx="165" cy="139" rx="106" ry="104" fill="url(#' +
     prefix +
-    'love)"/><ellipse class="pet-ground-shadow" cx="165" cy="222" rx="40" ry="5" fill="#000" opacity=".14"/><g class="pet-character" filter="url(#' + prefix + 'outline)"><g class="pet-turn"><g class="pose-curl">' +
+    'love)"/><ellipse class="pet-ground-shadow" cx="165" cy="222" rx="40" ry="5" fill="#000" opacity=".14"/><g class="pet-character" filter="url(#' +
+    prefix +
+    'outline)"><g class="pet-turn"><g class="pose-curl">' +
     image('sleep') +
     '</g><g class="pose-sit">' +
     seated +
