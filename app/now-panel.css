@@ -72,7 +72,7 @@ body {
   padding: 0 10px;
   font-size: 12px;
 }
-/* «Скачать и слушать» — главное действие для трека из SoundCloud: акцентная кнопка с иконкой. */
+/* «Сохранить в медиатеку» — главное действие для трека из SoundCloud: акцентная кнопка с иконкой. */
 .now-panel .current-file-actions .alignment-button {
   border: 1px solid color-mix(in srgb, var(--accent, #ffd629) 55%, transparent);
   background: color-mix(in srgb, var(--accent, #ffd629) 12%, transparent);

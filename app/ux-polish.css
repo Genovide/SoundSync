@@ -1,0 +1,113 @@
+/* Мелкие правки удобства: один поиск на экране, «Ещё» в меню, баннер главной и узкие окна. */
+
+/* Верхний поиск ищет по своей музыке; на странице SoundCloud его место пустует, свой поиск ниже. */
+.search.search-off {
+  visibility: hidden;
+}
+
+/* «Ещё» в меню выглядит как обычный пункт; вложенные пункты чуть сдвинуты вправо. */
+.sidebar .nav-more > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.sidebar .nav-more > summary::-webkit-details-marker {
+  display: none;
+}
+.sidebar .nav-more > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  opacity: 0.6;
+  transition: transform 200ms ease;
+}
+.sidebar .nav-more[open] > summary::after {
+  transform: rotate(225deg) translateY(-2px);
+}
+.sidebar .nav-more > summary.has-active:not(:focus-visible) {
+  color: var(--accent, #ffd629);
+}
+.sidebar .nav-more-items {
+  display: grid;
+  gap: inherit;
+  padding-left: 12px;
+  animation: nav-more-in 200ms ease;
+}
+@keyframes nav-more-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .nav-more-items {
+    animation: none;
+  }
+}
+
+/* «Нравится» и «Не нравится» живут в нижнем плеере (он виден всегда, панель на узких окнах
+   скрыта). Копии в правой панели убраны, главная кнопка занимает весь ряд. */
+.now-panel .now-actions-row .sidebar-feedback {
+  display: none !important;
+}
+.now-panel .now-actions-row,
+.now-panel .now-actions-row:not(:has(.now-action-tools :is(button, a):not(.hidden))) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Компактный баннер главной (со второго запуска): одна строка заголовка, кнопки и статуя. */
+.dashboard-home .hero.hero-compact {
+  height: 132px;
+  padding-block: 20px;
+  margin-bottom: 20px;
+}
+.dashboard-home .hero.hero-compact h1 {
+  font-size: clamp(22px, 2.2vw, 32px);
+  line-height: 1.05;
+}
+.dashboard-home .hero.hero-compact h1 br,
+.dashboard-home .hero.hero-compact .hero-description,
+.dashboard-home .hero.hero-compact .orb-scene {
+  display: none !important;
+}
+.dashboard-home .hero.hero-compact h1 {
+  white-space: nowrap;
+}
+.dashboard-home .hero.hero-compact h1 em {
+  margin-left: 0.25em;
+}
+.dashboard-home .hero.hero-compact .hero-actions {
+  margin-top: 14px;
+}
+.dashboard-home .hero.hero-compact .hero-statue {
+  left: auto;
+  right: 6%;
+}
+
+/* Узкие окна: подписи карточек главной не переносятся на вторую строку, а обрезаются аккуратно. */
+.home-pick > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Когда карточки узкие, подпись убираем целиком (она в подсказке), а не режем до «Знакомое з…». */
+.home-picks {
+  container-type: inline-size;
+}
+@container (max-width: 700px) {
+  .home-pick small {
+    display: none;
+  }
+}
+.home-pick :is(strong, small),
+.home-album :is(strong, small) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.home-pick .pick-play,
+.home-pick .pick-symbol {
+  flex: 0 0 auto;
+}
