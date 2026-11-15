@@ -300,6 +300,27 @@ module.exports = function ({
     previews.delete(token);
     return result;
   });
+  // Перенос из другого сервиса: плеер уже подобрал треки (библиотека или SoundCloud),
+  // здесь из них собирается новый плейлист. Неизвестные и повторы пропускаются.
+  ipcMain.handle('playlists-import-list', (e, name, ids) => {
+    authorize(e);
+    if (!Array.isArray(ids) || !ids.length) throw Error('Выбери хотя бы один трек.');
+    if (ids.length > 10000) throw Error('В плейлисте может быть не больше 10 000 треков.');
+    return mutate(() => {
+      const seen = new Set(),
+        tracks = [];
+      for (const id of ids) {
+        if (typeof id !== 'string') continue;
+        const t = track(id);
+        const key = t && (t.scId || t.soundcloudId ? 'sc:' + (t.scId || t.soundcloudId) : t.id);
+        if (!t || seen.has(key)) continue;
+        seen.add(key);
+        tracks.push(reference(t));
+      }
+      if (!tracks.length) throw Error('Ни один трек не найден. Попробуй загрузить список снова.');
+      return { ...create(name, tracks), added: tracks.length, skipped: ids.length - tracks.length };
+    });
+  });
   return { flush: () => writes };
 };
 module.exports.reference = reference;

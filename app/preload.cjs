@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('lumen', {
   playlistRecord: (id, token) => ipcRenderer.invoke('playlists-record', id, token),
   playlistImportPreview: (url) => ipcRenderer.invoke('playlists-import-preview', url),
   playlistImportCommit: (token) => ipcRenderer.invoke('playlists-import-commit', token),
+  playlistImportList: (name, ids) => ipcRenderer.invoke('playlists-import-list', name, ids),
   scImportPreview: (url) => ipcRenderer.invoke('sc-import-preview', url),
   scImportCommit: (token) => ipcRenderer.invoke('sc-import-commit', token),
   scImportCancel: () => ipcRenderer.invoke('sc-import-cancel'),
