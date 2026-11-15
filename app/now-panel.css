@@ -1,0 +1,249 @@
+/* Правая панель «Сейчас играет»: шире, без старого отступа под кнопки и с понятным
+   рядом действий. Подключается последней, поэтому перекрывает прежние слои стилей. */
+body {
+  grid-template-columns: 194px minmax(390px, 1fr) 344px;
+}
+@media (min-width: 1500px) {
+  body {
+    grid-template-columns: 210px minmax(420px, 1fr) 372px;
+  }
+}
+@media (max-width: 1150px) {
+  body {
+    grid-template-columns: 174px minmax(370px, 1fr) 300px;
+  }
+}
+
+/* Отступ справа остался от времён, когда сердце висело в углу у названия. */
+.now-panel .now-details,
+.now-panel .now-details:has(.dislike-current:not(.hidden)) {
+  padding-right: 0;
+}
+.now-panel .now-details h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ряд действий: главная кнопка занимает всё место, оценки — справа рядом. */
+.now-panel .now-actions-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.now-panel .now-actions-row:not(:has(.now-action-tools :is(button, a):not(.hidden))) {
+  grid-template-columns: auto;
+  justify-content: start;
+}
+.now-panel .now-action-tools,
+.now-panel .now-actions-row .current-file-actions,
+.now-panel .now-actions-row .alignment-tools {
+  min-width: 0;
+  width: 100%;
+}
+.now-panel .now-actions-row .current-file-actions {
+  display: flex;
+  gap: 8px;
+}
+.now-panel .now-actions-row .alignment-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.now-panel .now-actions-row .alignment-button {
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.now-panel .now-actions-row .alignment-tools .alignment-button {
+  flex: 1 1 auto;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+/* «Скачать и слушать» — главное действие для трека из SoundCloud: акцентная кнопка с иконкой. */
+.now-panel .current-file-actions .alignment-button {
+  border: 1px solid color-mix(in srgb, var(--accent, #ffd629) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, #ffd629) 12%, transparent);
+  color: #fff3c0;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 120ms ease;
+}
+.now-panel .current-file-actions .alignment-button::before {
+  content: '';
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='m7 11 5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='m7 11 5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+.now-panel .current-file-actions .alignment-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent, #ffd629) 22%, transparent);
+  border-color: var(--accent, #ffd629);
+}
+.now-panel .current-file-actions .alignment-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.now-panel .current-file-actions .alignment-button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* Оценки — одинаковые круглые кнопки с понятным наведением. */
+.now-panel .now-actions-row .sidebar-feedback {
+  display: flex;
+  gap: 6px;
+  height: auto;
+}
+.now-panel .now-actions-row .sidebar-feedback > #now-favorite,
+.now-panel .now-actions-row .sidebar-feedback > .dislike-current {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #ffffff14;
+  background: #ffffff08;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.now-panel .now-actions-row .sidebar-feedback > :is(#now-favorite, .dislike-current):hover {
+  background: #ffffff14;
+  border-color: #ffffff26;
+}
+.now-panel .now-actions-row .sidebar-feedback > #now-favorite.liked {
+  border-color: color-mix(in srgb, var(--accent, #ffd629) 45%, transparent);
+  background: color-mix(in srgb, var(--accent, #ffd629) 12%, transparent);
+}
+
+/* Второстепенные ссылки — одного размера и цвета, с иконкой, а не мелким жёлтым текстом. */
+.now-panel .lyrics-lookup {
+  margin: 10px 0 0;
+}
+.now-panel :is(.lyrics-lookup .quiet, .card-edit-current) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: #c9b766;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+.now-panel :is(.lyrics-lookup .quiet, .card-edit-current):hover {
+  color: var(--accent, #ffd629);
+}
+.now-panel :is(.lyrics-lookup .quiet, .card-edit-current)::before {
+  content: '';
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: var(--link-icon) center / contain no-repeat;
+  mask: var(--link-icon) center / contain no-repeat;
+}
+.now-panel .lyrics-lookup .quiet {
+  --link-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 12h10M4 18h7'/%3E%3Ccircle cx='17.5' cy='16.5' r='2.5'/%3E%3Cpath d='m19.5 18.5 2 2'/%3E%3C/svg%3E");
+}
+.now-panel .card-edit-current {
+  --link-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16v4z'/%3E%3Cpath d='m13.5 6.5 4 4'/%3E%3C/svg%3E");
+  margin-top: 6px;
+}
+.now-panel .song-insight {
+  margin-top: 10px;
+}
+
+/* Пустой текст песни: спокойная подсказка вместо висящей кавычки и простыни текста. */
+.now-panel .lyrics:not(:has(.lyric-line)) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.now-panel .lyrics:not(:has(.lyric-line)) .lyrics-mark {
+  font-size: 28px;
+  line-height: 1;
+  opacity: 0.45;
+  margin-bottom: 6px;
+}
+.now-panel .lyrics:not(:has(.lyric-line)) p {
+  margin: 0;
+  max-width: 34ch;
+  color: #9a9a92;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Порядок блоков: название → действия → ссылки одной строкой → AI-описание. */
+.now-panel .now-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+}
+.now-panel .now-details > * {
+  flex: 1 1 100%;
+  min-width: 0;
+  order: 5;
+}
+.now-panel .now-details > .now-kicker {
+  order: 0;
+}
+.now-panel .now-details > :is(h2, p) {
+  order: 1;
+}
+.now-panel .now-details > .now-actions-row {
+  order: 2;
+}
+.now-panel .now-details > :is(.lyrics-lookup, .card-edit-current) {
+  flex: 0 0 auto;
+  order: 3;
+  margin-top: 10px;
+}
+.now-panel .now-details > .song-insight {
+  order: 4;
+}
+.now-panel .lyrics:not(:has(.lyric-line)) .lyrics-mark {
+  display: none;
+}
+
+/* Плотнее по вертикали, чтобы название, действия, ссылки и AI-описание помещались без прокрутки. */
+.now-panel .now-details > :is(.lyrics-lookup, .card-edit-current) {
+  margin-top: 6px;
+}
+.now-panel :is(.lyrics-lookup .quiet, .card-edit-current) {
+  padding: 2px 0;
+}
+.now-panel .now-details > .song-insight {
+  margin-top: 8px;
+}
+@media (max-height: 760px) {
+  .now-panel .now-actions-row {
+    margin-top: 8px;
+  }
+  .now-panel .now-details > :is(.lyrics-lookup, .card-edit-current) {
+    margin-top: 4px;
+  }
+  .now-panel .now-details > .song-insight {
+    margin-top: 6px;
+  }
+}

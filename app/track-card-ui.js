@@ -258,7 +258,8 @@
     if (top + trackMenu.offsetHeight > innerHeight - 12)
       trackMenu.style.top = Math.max(12, innerHeight - trackMenu.offsetHeight - 12) + 'px';
   };
-  const currentEdit = node('button', 'card-edit-current', 'Редактировать карточку');
+  // Короткая подпись, чтобы стоять в одну строку с «Выбрать найденный текст»; полная — в подсказке.
+  const currentEdit = node('button', 'card-edit-current', 'Карточка трека');
   currentEdit.id = 'edit-current-card';
   currentEdit.title = 'Редактировать карточку текущего трека';
   currentEdit.onclick = () => current && open(current);
