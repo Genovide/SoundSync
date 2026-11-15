@@ -2,7 +2,8 @@
 const scSection = node('section', 'sc-section hidden'),
   scHeading = node('div', 'sc-heading'),
   scTitle = node('h2', '', 'SoundCloud'),
-  scSettingsButton = node('button', 'outline', 'Настройки'),
+  // Не путать с общими «Настройками» в меню: это подключение и папка SoundCloud.
+  scSettingsButton = node('button', 'outline', 'Настройки SoundCloud'),
   scHint = node('p', 'sc-hint', 'Найди трек, исполнителя или вставь ссылку SoundCloud.'),
   scForm = node('form', 'sc-search'),
   scInput = node('input'),

@@ -638,6 +638,10 @@ app
       minWidth: 1000,
       minHeight: 720,
       frame: process.platform === 'darwin',
+      // На Mac системную полосу с повтором «SoundSync» убираем: кнопки окна стоят в шапке приложения.
+      ...(process.platform === 'darwin'
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 19 } }
+        : {}),
       backgroundColor: '#090c12',
       icon: path.join(__dirname, process.platform === 'darwin' ? 'icon.png' : 'icon.ico'),
       show: false,

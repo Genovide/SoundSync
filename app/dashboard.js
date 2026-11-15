@@ -220,7 +220,8 @@
     });
     const refreshButton = randomHeading.lastChild;
     refreshButton.textContent =
-      randomRemoteBusy && randomTab === 'soundcloud' ? 'Загрузка…' : 'Обновить ⤨';
+      randomRemoteBusy && randomTab === 'soundcloud' ? 'Загрузка…' : 'Перемешать заново';
+    refreshButton.classList.add('home-reshuffle');
     refreshButton.disabled = randomTab === 'soundcloud' && randomRemoteBusy;
     const sourceSwitch = node('div', 'home-random-switch');
     sourceSwitch.setAttribute('role', 'group');
@@ -308,7 +309,8 @@
         refreshAlbums(albums);
         drawHome();
       });
-      albumHeading.lastChild.textContent = 'Обновить ⤨';
+      albumHeading.lastChild.textContent = 'Перемешать заново';
+      albumHeading.lastChild.classList.add('home-reshuffle');
       homeContent.append(albumHeading);
       const grid = node('div', 'home-albums home-random-albums');
       for (const key of randomAlbumKeys) {

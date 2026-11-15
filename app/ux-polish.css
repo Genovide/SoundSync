@@ -111,3 +111,95 @@
 .home-pick .pick-symbol {
   flex: 0 0 auto;
 }
+
+/* Меню слева не уезжает под плеер: на невысоком окне список пунктов прокручивается,
+   карточка папки остаётся внизу и становится компактнее. */
+body > .sidebar,
+body > .sidebar:has(.playlists-nav) {
+  overflow: hidden;
+}
+body > .sidebar > nav,
+body > .sidebar:has(.playlists-nav) > nav {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+.sidebar nav::-webkit-scrollbar {
+  display: none;
+}
+body > .sidebar > .sidebar-bottom {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding-top: 10px;
+}
+/* На невысоком окне карточку папки прячем: папку можно выбрать на главной и в «Настройках». */
+@media (max-height: 820px) {
+  body > .sidebar .folder-card {
+    display: none;
+  }
+}
+/* Если пункты меню не помещаются, внизу затухание: видно, что список прокручивается. */
+body > .sidebar > nav.nav-scrollable:not(.nav-at-end) {
+  mask-image: linear-gradient(#000 calc(100% - 36px), transparent);
+}
+
+/* Mac: кнопки окна (светофор) стоят прямо в шапке, поэтому логотип сдвинут вправо. */
+body.mac-window > .titlebar {
+  padding-left: 88px;
+}
+
+/* Кнопки в строках треков не рябят на длинном списке: видны при наведении, при фокусе
+   с клавиатуры и у играющего трека. Поставленное «нравится» видно всегда. На сенсорных
+   экранах (без наведения) всё остаётся видимым. */
+@media (hover: hover) {
+  .track-row :is(.sc-download-button, .track-options, .track-heart:not(.liked)) {
+    opacity: 0;
+    transition: opacity 140ms ease;
+  }
+  .track-row:is(:hover, :focus-within, .playing)
+    :is(.sc-download-button, .track-options, .track-heart:not(.liked)),
+  .track-row .sc-download-button:is(:disabled, :focus-visible) {
+    opacity: 1;
+  }
+}
+
+.dashboard-back.nowhere-back {
+  visibility: hidden;
+}
+
+/* «Перемешать заново» — заметная кнопка с иконкой, а не мелкая серая надпись. */
+.home-section-heading .home-reshuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid var(--ui-border, #ffffff1a);
+  border-radius: 999px;
+  background: var(--surface, #ffffff08);
+  color: var(--ui-text, #eeeae0);
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+.home-section-heading .home-reshuffle::before {
+  content: '';
+  width: 15px;
+  height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 4h4v4'/%3E%3Cpath d='M4 20 20 4'/%3E%3Cpath d='M20 16v4h-4'/%3E%3Cpath d='m15 15 5 5'/%3E%3Cpath d='M4 4l5 5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 4h4v4'/%3E%3Cpath d='M4 20 20 4'/%3E%3Cpath d='M20 16v4h-4'/%3E%3Cpath d='m15 15 5 5'/%3E%3Cpath d='M4 4l5 5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+.home-section-heading .home-reshuffle:hover:not(:disabled) {
+  background: #ffffff14;
+  border-color: #ffffff2e;
+}
+.home-section-heading .home-reshuffle:disabled {
+  opacity: 0.6;
+}
