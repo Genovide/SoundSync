@@ -34,6 +34,8 @@ try {
 } catch {}
 function persistUiPreferences(event, patch) {
   if (!win || event.sender !== win.webContents) throw Error('Invalid preference sender');
+  if (typeof patch.resumePlayback === 'boolean')
+    uiPreferences.resumePlayback = patch.resumePlayback;
   if (typeof patch.flatTheme === 'boolean') uiPreferences.flatTheme = patch.flatTheme;
   if (
     typeof patch.volume === 'number' &&
@@ -158,7 +160,13 @@ app.on('before-quit', (event) => {
     );
   }, 5000).unref?.();
   Promise.race([
-    Promise.allSettled([flushUiPreferences(), soundcloud?.flush?.(), trackCards?.flush?.()]),
+    Promise.allSettled([
+      flushUiPreferences(),
+      soundcloud?.flush?.(),
+      trackCards?.flush?.(),
+      playbackSession?.flush?.(),
+      companion?.flush?.(),
+    ]),
     new Promise((resolve) => setTimeout(resolve, 2000)),
   ]).finally(() => {
     quitStage = 'closing windows';
@@ -185,7 +193,14 @@ protocol.registerSchemesAsPrivileged([
     },
   },
 ]);
-let soundcloud, alignmentEngine, lyricsStore, libraryMetadata, trackCards;
+let soundcloud,
+  alignmentEngine,
+  lyricsStore,
+  libraryMetadata,
+  trackCards,
+  playbackSession,
+  localPlayback,
+  companion;
 let win,
   library = { folder: '', tracks: [] },
   allowed = new Map(),
@@ -514,12 +529,39 @@ app
       getLibrary: () => library,
       getRemoteTrack: (id) => soundcloud.getTrack(id),
     });
-    require('./local-playback.cjs')({
+    localPlayback = require('./local-playback.cjs')({
       app,
       ipcMain,
       getWindow: () => win,
       getLibrary: () => library,
       register: (id, file) => allowed.set(id, file),
+    });
+    playbackSession = require('./playback-session.cjs')({
+      app,
+      ipcMain,
+      getWindow: () => win,
+      getLibrary: () => library,
+      getRemote: (id) => soundcloud.getTrack(id),
+      register: (tracks) => soundcloud.register(tracks),
+      remoteReady: () => soundcloud.status(),
+      enabled: () => uiPreferences.resumePlayback !== false,
+    });
+    companion = require('./companion.cjs')({
+      app,
+      ipcMain,
+      dialog,
+      getWindow: () => win,
+      getTrack: (id) => library.tracks.find((t) => t.id === id) || soundcloud.getTrack(id),
+    });
+    require('./storage.cjs')({
+      app,
+      ipcMain,
+      dialog,
+      getWindow: () => win,
+      protectedFiles: () =>
+        [...allowed.entries()].filter(([id]) => id.endsWith('-decoded')).map(([, file]) => file),
+      playbackBusy: () => localPlayback.isBusy(),
+      alignmentBusy: () => alignmentEngine.isBusy(),
     });
     protocol.handle('lumen', async (request) => {
       if (new URL(request.url).hostname === 'track-cover') return trackCards.cover(request);
@@ -633,13 +675,13 @@ app
       rendererErrors.push(error.message);
       startupLog('Preload: ' + error.stack);
     });
-    if (process.platform === 'darwin')
-      win.on('close', (event) => {
-        if (!quitting) {
-          event.preventDefault();
-          win.hide();
-        }
-      });
+    win.on('close', (event) => {
+      if (!quitting) {
+        event.preventDefault();
+        if (process.platform === 'darwin') win.hide();
+        else app.quit();
+      }
+    });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (e) => e.preventDefault());
     // В тестовых прогонах (smoke, интерфейсные проверки) заставка не нужна.

@@ -44,7 +44,8 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Data,Data\*"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Leading \ anchors exclusions at SourceDir: nested Python packages named data are required.
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "\Data,\Data\*"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{autoprograms}\SoundSync"; Filename: "{app}\SoundSync.exe"

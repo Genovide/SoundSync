@@ -252,6 +252,143 @@
   });
   row(visual, 'Чувствительность к музыке', sensitivity);
 
+  const playback = section('Продолжение прослушивания');
+  const resume = toggle(window.SoundSyncResume.enabled, (on) =>
+    window.SoundSyncResume.setEnabled(on)
+  );
+  row(
+    playback,
+    'Запоминать трек и позицию',
+    resume.wrap,
+    'После запуска восстановятся очередь и позиция. Нажми Play, чтобы продолжить.'
+  );
+
+  const petSection = section(
+    'Питомец',
+    'Хранится в пользовательских данных и переживает обновления. Экспорт позволяет перенести его на другой компьютер.'
+  );
+  const petControls = el('div', 'settings-inline');
+  const petSpeech = toggle(store.get('pet-speech-enabled', 'true') !== 'false', (enabled) => {
+    store.set('pet-speech-enabled', String(enabled));
+    window.dispatchEvent(new Event('pet-speech-preference'));
+  });
+  petSpeech.input.setAttribute('aria-label', 'Реплики питомца');
+  row(petSection, 'Реплики питомца', petSpeech.wrap, 'Показывать фразы над питомцем.');
+  petControls.append(
+    button('Открыть питомца', () => {
+      dialog.close();
+      window.SoundSyncPet.open();
+    }),
+    button('Экспорт', () => window.SoundSyncPet.export()),
+    button('Импорт', () => window.SoundSyncPet.import())
+  );
+  const resetWarning = el('p', 'pet-reset-warning', 'ВЕСЬ ПРОГРЕСС ПИТОМЦА БУДЕТ УДАЛЁН');
+  const resetHint = el(
+    'p',
+    'settings-hint',
+    'При перевыборе сбросятся имя, опыт, уровень, ноты, статистика и аксессуары. Ты снова начнёшь с яйца.'
+  );
+  const resetStatus = el('p', 'settings-hint');
+  resetStatus.setAttribute('role', 'alert');
+  const resetPet = button(
+    'Перевыбрать питомца',
+    async () => {
+      resetPet.disabled = true;
+      resetStatus.textContent = '';
+      try {
+        if (await window.SoundSyncPet.reset()) {
+          dialog.close();
+          await window.SoundSyncPet.open();
+        }
+      } catch (error) {
+        resetStatus.textContent = String(error.message || error).replace(
+          /^Error invoking remote method '[^']+': (?:Error: )?/,
+          ''
+        );
+      } finally {
+        resetPet.disabled = false;
+      }
+    },
+    'settings-button pet-reset-button'
+  );
+  const resetBox = el('div', 'pet-reset-box');
+  resetBox.append(resetWarning, resetHint, resetPet, resetStatus);
+  petSection.append(petControls, resetBox);
+
+  const storage = section(
+    'Хранилище',
+    'Размер приложения и его данных. Музыкальные файлы в твоих папках сюда не входят.'
+  );
+  const storageSummary = el('p', 'settings-hint', 'Подсчёт размера…');
+  storageSummary.setAttribute('role', 'status');
+  const storageRows = el('div', 'storage-rows');
+  const storageButtons = el('div', 'settings-inline');
+  const refreshStorage = button('Обновить', () => loadStorage(true));
+  storageButtons.append(
+    refreshStorage,
+    button('Открыть папку данных', () => window.lumen.storageOpen())
+  );
+  storage.append(storageSummary, storageRows, storageButtons);
+  const bytes = (n) =>
+    n >= 1073741824
+      ? (n / 1073741824).toFixed(2) + ' ГБ'
+      : n >= 1048576
+        ? (n / 1048576).toFixed(1) + ' МБ'
+        : Math.round(n / 1024) + ' КБ';
+  let storageBusy = false;
+  function showStorage(info) {
+    storageSummary.textContent = 'Всего: ' + bytes(info.total);
+    storageRows.replaceChildren();
+    for (const item of info.rows) {
+      const controls = el('div', 'settings-inline');
+      controls.append(el('span', 'storage-size', bytes(item.bytes)));
+      if (item.clearable) {
+        const clear = button('Очистить', async () => {
+          if (storageBusy) return;
+          storageBusy = true;
+          clear.disabled = true;
+          try {
+            showStorage(await window.lumen.storageClear(item.id));
+          } catch (error) {
+            storageSummary.textContent = error.message.replace(
+              /^Error invoking remote method '[^']+': Error: /,
+              ''
+            );
+          } finally {
+            storageBusy = false;
+            clear.disabled = false;
+          }
+        });
+        clear.disabled = !item.bytes;
+        controls.append(clear);
+      }
+      row(
+        storageRows,
+        item.name,
+        controls,
+        item.id === 'backups'
+          ? 'При очистке последняя копия останется'
+          : item.id === 'playback'
+            ? 'Используемые плеером файлы сохранятся'
+            : undefined
+      );
+    }
+  }
+  async function loadStorage(force = false) {
+    if (storageBusy) return;
+    storageBusy = true;
+    refreshStorage.disabled = true;
+    storageSummary.textContent = 'Подсчёт размера…';
+    try {
+      showStorage(await window.lumen.storageInfo(force));
+    } catch {
+      storageSummary.textContent = 'Не удалось подсчитать размер. Попробуй обновить.';
+    } finally {
+      storageBusy = false;
+      refreshStorage.disabled = false;
+    }
+  }
+
   // ——— Медиатека ———
   const mediaSection = section('Медиатека');
   const folderText = el('span', 'settings-path');
@@ -290,6 +427,8 @@
 
   // ——— Открытие ———
   function refresh() {
+    resume.input.checked = window.SoundSyncResume.enabled;
+    loadStorage();
     gradients.input.checked = !document.body.classList.contains('flat-theme');
     sceneSelect.value = modeSelect?.value || '';
     if (reaction) {
