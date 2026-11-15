@@ -82,6 +82,7 @@ module.exports = function setupSoundCloud({
     dir: path.join(dir, 'metadata'),
     fetchImpl,
   });
+  const hlsFeed = require('./hls-feed.cjs').createHlsFeed({ fetchImpl, validate: cdnUrl });
   const fast = require('./soundcloud-fast.cjs')({ dir, fetchImpl, mapTrack: apiTrack }),
     resolveJobs = new Map();
   const hlsManifests = new Map();
@@ -833,8 +834,26 @@ module.exports = function setupSoundCloud({
           if (upstream.headers.has(h)) out[h] = upstream.headers.get(h);
         return new Response(upstream.body, { status: upstream.status, headers: out });
       }
+      // Быстрый путь: куски HLS качает сам плеер (hls-feed.cjs), ffmpeg читает их из pipe.
+      // Если начало трека прогрето заранее, звук идёт почти сразу.
+      let feed = null;
+      if (value.protocol !== 'progressive') {
+        for (let attempt = 0; attempt < 2 && !feed; attempt++) {
+          try {
+            feed = await hlsFeed.open(cdnUrl(value.url), start, request.signal);
+            if (!feed) break;
+          } catch (e) {
+            if (request.signal?.aborted) return new Response(null, { status: 499 });
+            // Ссылка устарела — берём новую и пробуем ещё раз; иначе остаётся прежний путь.
+            if (attempt || ![401, 403].includes(e.status)) break;
+            resolved.delete(id);
+            fast.clear();
+            value = await resolve(id);
+          }
+        }
+      }
       let trimmed = null;
-      if (start && value.protocol !== 'progressive') {
+      if (!feed && start && value.protocol !== 'progressive') {
         try {
           let text = hlsManifests.get(value.url);
           if (!text) {
@@ -865,7 +884,10 @@ module.exports = function setupSoundCloud({
         '-probesize',
         '32768',
       ];
-      if (trimmed) {
+      if (feed) {
+        if (feed.offset) args.push('-ss', String(feed.offset));
+        args.push('-f', 'mp4', '-i', 'pipe:0', '-vn');
+      } else if (trimmed) {
         args.push('-protocol_whitelist', 'https,http,tcp,tls,pipe', '-allowed_extensions', 'ALL');
         if (trimmed.offset) args.push('-ss', String(trimmed.offset));
         args.push('-f', 'hls', '-i', 'pipe:0', '-vn');
@@ -880,7 +902,11 @@ module.exports = function setupSoundCloud({
       child.scStream = true;
       children.add(child);
       child.stdin.on('error', () => {});
-      if (trimmed) child.stdin.end(trimmed.playlist);
+      if (feed) {
+        feed.readable.on('error', () => child.stdin.destroy());
+        child.on('close', () => feed.readable.destroy());
+        feed.readable.pipe(child.stdin);
+      } else if (trimmed) child.stdin.end(trimmed.playlist);
       else child.stdin.end();
       child.stderr.resume();
       child.on('error', () => child.stdout.destroy());
@@ -1070,7 +1096,9 @@ module.exports = function setupSoundCloud({
   ipcMain.handle('sc-prefetch', async (_, id) => {
     if (typeof id !== 'string' || !tracks.has(id)) return false;
     await initial;
-    await resolve(id);
+    const value = await resolve(id);
+    // Заранее качаем плейлист и начало трека, чтобы он заиграл сразу после нажатия.
+    if (value.protocol !== 'progressive') await hlsFeed.warm(cdnUrl(value.url)).catch(() => {});
     return true;
   });
   ipcMain.handle('sc-status', () => initial.then(status));
