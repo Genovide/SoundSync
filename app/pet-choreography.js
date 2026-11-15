@@ -258,9 +258,11 @@
         hop(19);
         look(1);
         motion('.pet-paw-right', [
-          [0, 'none'], [0.28, 'none'],
+          [0, 'none'],
+          [0.28, 'none'],
           [0.48, 'translate(7px,-7px) rotate(-12deg)'],
-          [0.68, 'translate(3px,-3px) rotate(-5deg)'], [1, 'none'],
+          [0.68, 'translate(3px,-3px) rotate(-5deg)'],
+          [1, 'none'],
         ]);
         break;
       case 'next':

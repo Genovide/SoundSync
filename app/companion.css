@@ -620,5 +620,9 @@
   box-shadow: none;
   transform: none;
 }
-.pet-creature { filter: none; }
-.pet-raster .pet-ground-shadow { display: none; }
+.pet-creature {
+  filter: none;
+}
+.pet-raster .pet-ground-shadow {
+  display: none;
+}

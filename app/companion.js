@@ -338,7 +338,8 @@
   async function stroke() {
     await act({ type: 'stroke' });
   }
-  let toyAnimations = [], toyBalls = [];
+  let toyAnimations = [],
+    toyBalls = [];
   function stopToy() {
     toyAnimations.forEach((animation) => animation.cancel());
     toyBalls.forEach((ball) => ball.remove());
@@ -359,13 +360,30 @@
       host.append(ball);
       toyBalls.push(ball);
       const size = host.clientWidth;
-      const animation = ball.animate(reduced ? [{ opacity: 1 }, { opacity: 0 }] : [
-        { transform: 'translate(0,0) rotate(0deg)', opacity: 0, offset: 0 },
-        { transform: `translate(${-size * .12}px,${-size * .3}px) rotate(-100deg)`, opacity: 1, offset: .22 },
-        { transform: `translate(${-size * .35}px,0) rotate(-220deg)`, opacity: 1, offset: .5 },
-        { transform: `translate(${-size * .16}px,${-size * .18}px) rotate(-60deg)`, opacity: 1, offset: .7 },
-        { transform: `translate(${size * .12}px,0) rotate(120deg)`, opacity: 0, offset: 1 },
-      ], { duration: 2100, easing: 'ease-in-out', fill: 'forwards' });
+      const animation = ball.animate(
+        reduced
+          ? [{ opacity: 1 }, { opacity: 0 }]
+          : [
+              { transform: 'translate(0,0) rotate(0deg)', opacity: 0, offset: 0 },
+              {
+                transform: `translate(${-size * 0.12}px,${-size * 0.3}px) rotate(-100deg)`,
+                opacity: 1,
+                offset: 0.22,
+              },
+              {
+                transform: `translate(${-size * 0.35}px,0) rotate(-220deg)`,
+                opacity: 1,
+                offset: 0.5,
+              },
+              {
+                transform: `translate(${-size * 0.16}px,${-size * 0.18}px) rotate(-60deg)`,
+                opacity: 1,
+                offset: 0.7,
+              },
+              { transform: `translate(${size * 0.12}px,0) rotate(120deg)`, opacity: 0, offset: 1 },
+            ],
+        { duration: 2100, easing: 'ease-in-out', fill: 'forwards' }
+      );
       toyAnimations.push(animation);
     }
     const currentThrow = toyAnimations;

@@ -296,7 +296,15 @@ module.exports = ({ app, ipcMain, dialog, getWindow, getTrack }) => {
         throw Error('Имя: от 1 до 30 символов');
       p.name = value.name.trim();
     } else if (value?.type === 'accessory') {
-      const required = { none: 1, headphones: 1, glasses: 1, bow: 2, star: 3, bandana: 4, crown: 5 }[value.id];
+      const required = {
+        none: 1,
+        headphones: 1,
+        glasses: 1,
+        bow: 2,
+        star: 3,
+        bandana: 4,
+        crown: 5,
+      }[value.id];
       if (!required || info().level < required) throw Error('Этот аксессуар пока не открыт');
       p.accessory = value.id;
     } else throw Error('Неизвестное действие');
