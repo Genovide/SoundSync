@@ -199,6 +199,34 @@
     paintEq(EQ.get());
   }
 
+  // ——— Звук: переходы между треками ———
+  const TR = window.SoundSyncTransitions;
+  if (TR) {
+    const fadeValue = el('span', 'settings-value');
+    const paintFade = (seconds) => (fadeValue.textContent = seconds ? seconds + ' с' : 'выкл.');
+    const fade = slider(0, 12, 1, TR.get().crossfade, (v) => {
+      TR.setCrossfade(v);
+      paintFade(v);
+    });
+    fade.setAttribute('aria-label', 'Кроссфейд, секунды');
+    const fadeBox = el('div', 'settings-range-row');
+    fadeBox.append(fade, fadeValue);
+    paintFade(TR.get().crossfade);
+    row(
+      sound,
+      'Плавный переход',
+      fadeBox,
+      'Конец трека затихает, следующий в это время набирает громкость'
+    );
+    const level = toggle(TR.get().normalize, (on) => TR.setNormalize(on));
+    row(
+      sound,
+      'Выравнивать громкость',
+      level.wrap,
+      'Тихие треки чуть громче, громкие — тише, чтобы не крутить ручку'
+    );
+  }
+
   // ——— Текст песен ———
   const lyrics = section('Текст песен');
   const offsetValue = el('span', 'settings-value');
