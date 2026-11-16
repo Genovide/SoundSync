@@ -1214,6 +1214,13 @@ module.exports = function setupSoundCloud({
     flush: () => Promise.allSettled([historyWrites, favoriteWrites, exclusionWrites]),
     getTrack: (id) => tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id),
     handleProtocol,
+    // Для измерения громкости: адрес потока и ffmpeg (без воспроизведения).
+    loudnessSource: async (id) => {
+      await initial;
+      const value = await resolve(id);
+      return { url: cdnUrl(value.url), ffmpeg: value.ffmpeg || (await ffmpegPath()) };
+    },
+    ffmpeg: () => ffmpegPath(),
     status: () => initial.then(status),
     downloadRoots: async () => {
       await initial;

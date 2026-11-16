@@ -33,7 +33,9 @@
       };
   } catch {}
   let filters = [],
-    preamp = null;
+    preamp = null,
+    fadeGain = null,
+    levelGain = null;
   const listeners = new Set();
   const save = () => {
     try {
@@ -69,7 +71,13 @@
       return f;
     });
     preamp = ctx.createGain();
-    let node = source;
+    // Плавные переходы: затухание трека и выравнивание громкости — до эквалайзера, чтобы
+    // хвост прошлого трека при кроссфейде проходил через те же полосы.
+    fadeGain = ctx.createGain();
+    levelGain = ctx.createGain();
+    source.connect(fadeGain);
+    fadeGain.connect(levelGain);
+    let node = levelGain;
     for (const f of filters) {
       node.connect(f);
       node = f;
@@ -108,6 +116,10 @@
       apply();
       notify();
     },
+    // Вход цепочки после регулировок трека: сюда подключается хвост при кроссфейде.
+    input: () => filters[0] || preamp,
+    fade: () => fadeGain,
+    level: () => levelGain,
     onChange(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);

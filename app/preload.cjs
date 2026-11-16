@@ -76,6 +76,7 @@ contextBridge.exposeInMainWorld('lumen', {
   insightCached: (id, lyrics) => ipcRenderer.invoke('insight-cached', id, lyrics),
   insightGenerate: (id, lyrics) => ipcRenderer.invoke('insight-generate', id, lyrics),
   scPrefetch: (id) => ipcRenderer.invoke('sc-prefetch', id),
+  loudness: (url) => ipcRenderer.invoke('loudness-measure', url),
   scStatus: () => ipcRenderer.invoke('sc-status'),
   scSettings: (settings) => ipcRenderer.invoke('sc-settings', settings),
   scFolder: () => ipcRenderer.invoke('sc-folder'),
