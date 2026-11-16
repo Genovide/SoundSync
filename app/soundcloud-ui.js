@@ -2,7 +2,8 @@
 const scSection = node('section', 'sc-section hidden'),
   scHeading = node('div', 'sc-heading'),
   scTitle = node('h2', '', 'SoundCloud'),
-  scSettingsButton = node('button', 'outline', 'Настройки'),
+  // Не путать с общими «Настройками» в меню: это подключение и папка SoundCloud.
+  scSettingsButton = node('button', 'outline', 'Настройки SoundCloud'),
   scHint = node('p', 'sc-hint', 'Найди трек, исполнителя или вставь ссылку SoundCloud.'),
   scForm = node('form', 'sc-search'),
   scInput = node('input'),
@@ -99,9 +100,11 @@ render = function () {
     $('collection-title').firstChild.textContent = 'Скачанные треки ';
     $('empty').querySelector('h3').textContent = 'Пока нет скачанных треков';
     $('empty').querySelector('p').textContent =
-      'Найди музыку в SoundCloud и нажми «Скачать и слушать».';
+      'Найди музыку в SoundCloud и нажми «Сохранить в медиатеку».';
   }
   $('search').disabled = online;
+  // На странице SoundCloud свой поиск: верхний (по своей музыке) прячем, чтобы не было двух полей.
+  document.querySelector('header .search, .search')?.classList.toggle('search-off', online);
   addDeleteButtons();
   syncOnlineControls();
   syncOnlineRows();
@@ -154,7 +157,7 @@ function renderOnline() {
       info.append(art(t, 'track-cover'), text);
       download.append(icon(downloadBusy.has(t.id) ? 'sync' : 'download'));
       download.disabled = downloadBusy.has(t.id) || !!t.playbackUnavailable;
-      download.title = downloadBusy.has(t.id) ? 'Скачиваем…' : 'Скачать и слушать';
+      download.title = downloadBusy.has(t.id) ? 'Сохраняем…' : 'Сохранить в медиатеку';
       download.setAttribute('aria-label', download.title);
       download.onclick = (e) => {
         e.stopPropagation();
@@ -172,7 +175,7 @@ function renderOnline() {
           current?.id === t.id && !audio.paused ? '♫' : String(i + 1).padStart(2, '0')
         ),
         info,
-        node('div', 'track-album', t.album || 'SoundCloud'),
+        node('div', 'track-album', albumLabel(t)),
         node('div', 'track-time', fmt(t.duration)),
         download
       );
@@ -613,11 +616,11 @@ function trashButton(cls) {
   return button;
 }
 const currentActions = node('div', 'current-file-actions hidden'),
-  downloadCurrent = node('button', 'alignment-button hidden', 'Скачать и слушать');
+  downloadCurrent = node('button', 'alignment-button hidden', 'Сохранить в медиатеку');
 currentActions.append(downloadCurrent);
 document.querySelector('.now-details').append(currentActions);
 const immersiveDelete = trashButton('immersive-delete hidden'),
-  immersiveDownload = node('button', 'alignment-button hidden', 'Скачать и слушать');
+  immersiveDownload = node('button', 'alignment-button hidden', 'Сохранить в медиатеку');
 immersiveInfo.append(immersiveDelete, immersiveDownload);
 function syncOnlineControls() {
   if (typeof currentActions === 'undefined') return;
@@ -628,7 +631,10 @@ function syncOnlineControls() {
   immersiveDelete.classList.toggle('hidden', !current || !!current.remote);
   alignmentTools.classList.toggle('hidden', !!current?.remote);
   downloadCurrent.disabled = downloadBusy.has(current?.id);
-  downloadCurrent.textContent = downloadBusy.has(current?.id) ? 'Скачиваем…' : 'Скачать и слушать';
+  // Трек уже играет: кнопка сохраняет его к себе, а не «разрешает» слушать.
+  downloadCurrent.textContent = downloadBusy.has(current?.id)
+    ? 'Сохраняем…'
+    : 'Сохранить в медиатеку';
 }
 downloadCurrent.onclick = immersiveDownload.onclick = () =>
   current?.remote && downloadOnline(current);

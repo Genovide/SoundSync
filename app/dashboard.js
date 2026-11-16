@@ -20,6 +20,13 @@
   statue.alt = 'Античная статуя в наушниках SoundSync';
   statue.draggable = false;
   hero.append(statue);
+  // Большой баннер — только при первом знакомстве. Дальше он компактный и не занимает полэкрана.
+  let heroSeen = false;
+  try {
+    heroSeen = localStorage.getItem('home-hero-seen') === '1';
+    localStorage.setItem('home-hero-seen', '1');
+  } catch {}
+  hero.classList.toggle('hero-compact', heroSeen);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   hero.addEventListener('pointermove', (e) => {
     if (reducedMotion.matches || e.pointerType === 'touch') return;
@@ -196,6 +203,8 @@
         text,
         node('span', 'pick-play', '▶')
       );
+      // На узких окнах подпись обрезается многоточием; целиком — в подсказке.
+      b.title = title + ' — ' + subtitle;
       b.onclick = action;
       picks.append(b);
     }
@@ -211,7 +220,8 @@
     });
     const refreshButton = randomHeading.lastChild;
     refreshButton.textContent =
-      randomRemoteBusy && randomTab === 'soundcloud' ? 'Загрузка…' : 'Обновить ⤨';
+      randomRemoteBusy && randomTab === 'soundcloud' ? 'Загрузка…' : 'Перемешать заново';
+    refreshButton.classList.add('home-reshuffle');
     refreshButton.disabled = randomTab === 'soundcloud' && randomRemoteBusy;
     const sourceSwitch = node('div', 'home-random-switch');
     sourceSwitch.setAttribute('role', 'group');
@@ -291,7 +301,7 @@
     const albums = new Map();
     for (const t of library.tracks) {
       const key = t.album + '\0' + t.albumartist;
-      if (t.album && !albums.has(key)) albums.set(key, t);
+      if (albumLabel(t) && !albums.has(key)) albums.set(key, t);
     }
     if (albumSource !== JSON.stringify([...albums.keys()])) refreshAlbums(albums);
     if (albums.size) {
@@ -299,7 +309,8 @@
         refreshAlbums(albums);
         drawHome();
       });
-      albumHeading.lastChild.textContent = 'Обновить ⤨';
+      albumHeading.lastChild.textContent = 'Перемешать заново';
+      albumHeading.lastChild.classList.add('home-reshuffle');
       homeContent.append(albumHeading);
       const grid = node('div', 'home-albums home-random-albums');
       for (const key of randomAlbumKeys) {

@@ -507,6 +507,34 @@ app
       isAligning: (id) => scanBusy || alignmentEngine.isAligning(id),
       send: (channel, data) => win?.webContents.send(channel, data),
     });
+    // Громкость треков для выравнивания: локальный файл или поток SoundCloud.
+    require('./loudness.cjs')({
+      app,
+      ipcMain,
+      resolveInput: async (url) => {
+        const u = new URL(url);
+        if (u.protocol !== 'lumen:') return null;
+        const id = decodeURIComponent(u.pathname.slice(1));
+        if (u.hostname === 'sc-stream') {
+          const source = await soundcloud.loudnessSource(id);
+          return {
+            key: 'sc:' + id,
+            input: source.url,
+            ffmpeg: source.ffmpeg,
+            seconds: require('./loudness.cjs').REMOTE_SECONDS,
+          };
+        }
+        if (u.hostname !== 'media') return null;
+        const file = allowed.get(id) || allowed.get(u.pathname.slice(1));
+        if (!file) return null;
+        const { size, mtimeMs } = await fs.stat(file);
+        return {
+          key: file + ':' + size + ':' + Math.round(mtimeMs),
+          input: file,
+          ffmpeg: await soundcloud.ffmpeg(),
+        };
+      },
+    });
     require('./playlists.cjs')({
       app,
       ipcMain,
@@ -638,6 +666,10 @@ app
       minWidth: 1000,
       minHeight: 720,
       frame: process.platform === 'darwin',
+      // На Mac системную полосу с повтором «SoundSync» убираем: кнопки окна стоят в шапке приложения.
+      ...(process.platform === 'darwin'
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 19 } }
+        : {}),
       backgroundColor: '#090c12',
       icon: path.join(__dirname, process.platform === 'darwin' ? 'icon.png' : 'icon.ico'),
       show: false,

@@ -360,3 +360,20 @@ img {
 .pet-reset-box [role='alert']:empty {
   display: none;
 }
+
+/* Ползунок с подписью значения справа (кроссфейд). */
+.settings-range-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+.settings-range-row .settings-range {
+  flex: 1;
+}
+.settings-range-row .settings-value {
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-muted, #9a9a92);
+}

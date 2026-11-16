@@ -1,3 +1,16 @@
+// У синглов SoundCloud и файлов без тегов «альбом» — подстановка. В интерфейсе её не показываем.
+const PLACEHOLDER_ALBUM = /^(SoundCloud Single|Без альбома|Unknown Album)$/i;
+// Подсказка, когда текста нет: без «файлов» у треков из SoundCloud и с понятным следующим шагом.
+function emptyLyricsText(t) {
+  // Кнопка поиска называется по-разному («Найти текст», «Выбрать найденный текст»,
+  // «Повторить поиск»), поэтому в подсказке не называем её, а указываем, где она.
+  return t?.remote
+    ? 'Для этого трека пока нет текста.\nНайди его кнопкой поиска текста выше.'
+    : 'Для этой песни пока нет текста.\nНайди его кнопкой поиска текста выше или положи рядом с файлом .lrc или .txt.';
+}
+function albumLabel(t) {
+  return t?.album && !PLACEHOLDER_ALBUM.test(t.album) ? t.album : '';
+}
 const $ = (id) => document.getElementById(id),
   audio = $('audio');
 audio.crossOrigin = 'anonymous';
@@ -107,10 +120,13 @@ function render() {
   const albumsView = view === 'albums' && !albumFilter;
   $('albums').classList.toggle('hidden', !albumsView || !tracks.length);
   $('track-area').classList.toggle('hidden', albumsView || !tracks.length);
-  $('folder-label').textContent = library.folder || 'Выбери папку. Всё остальное мы найдём.';
+  // Вместо длинного пути — имя папки; полный путь остаётся в подсказке.
+  $('folder-label').textContent = library.folder
+    ? 'Папка «' + (library.folder.split(/[\\/]/).filter(Boolean).pop() || library.folder) + '»'
+    : 'Выбери папку. Всё остальное мы найдём.';
   $('folder-label').title = library.folder;
   $('library-meta').textContent = library.tracks.length
-    ? `${library.tracks.length.toLocaleString('ru')} треков · ${new Set(library.tracks.map((t) => t.album + '\0' + t.albumartist)).size} альбомов`
+    ? `${library.tracks.length.toLocaleString('ru')} треков · ${new Set(library.tracks.filter(albumLabel).map((t) => t.album + '\0' + t.albumartist)).size} альбомов`
     : 'Твоя музыка начинается с папки';
   if (albumsView) {
     const groups = new Map();
@@ -125,7 +141,11 @@ function render() {
         const b = node('button', 'album-card');
         b.append(
           art(t, 'album-art'),
-          node('strong', '', t.album),
+          node(
+            'strong',
+            '',
+            albumLabel(t) || (t.remote || /SoundCloud/i.test(t.album) ? 'Синглы' : t.album)
+          ),
           node('small', '', `${t.albumartist || t.artist} · ${count} треков`)
         );
         b.onclick = () => {
@@ -169,7 +189,7 @@ function render() {
           current?.id === t.id && !audio.paused ? '♫' : String(i + 1).padStart(2, '0')
         ),
         info,
-        node('div', 'track-album', t.album),
+        node('div', 'track-album', albumLabel(t)),
         node('div', 'track-time', t.duration ? fmt(t.duration) : '—'),
         heart
       );
@@ -342,14 +362,7 @@ function setLyrics(t) {
   $('lyrics').classList.toggle('synced', synced);
   $('lyrics').replaceChildren();
   if (!lyricLines.length) {
-    $('lyrics').append(
-      node('span', 'lyrics-mark', '“'),
-      node(
-        'p',
-        '',
-        'В этом файле пока нет текста.\nМожно положить .lrc или .txt рядом с песней и обновить библиотеку.'
-      )
-    );
+    $('lyrics').append(node('span', 'lyrics-mark', '“'), node('p', '', emptyLyricsText(current)));
     return;
   }
   for (const line of lyricLines) {
@@ -637,9 +650,10 @@ $('queue-tab').onclick = () => {
   renderQueue();
 };
 addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    $('search').focus();
+    // На странице SoundCloud Ctrl/Cmd+K ведёт в её поиск, а не в поиск по своей музыке.
+    (view === 'soundcloud' && typeof scInput !== 'undefined' ? scInput : $('search')).focus();
   }
   if (e.target.matches?.('input,textarea,select,button,[role=button]')) return;
   if (e.code === 'Space') {
