@@ -1,5 +1,5 @@
 ; Полная установка SoundSync для Windows (Inno Setup 6).
-; Сборка: ISCC /DAppVersion=1.2.13 /DSourceDir=<папка с SoundSync.exe> /DOutputDir=<dist> soundsync.iss
+; Сборка: ISCC /DAppVersion=1.3.0 /DSourceDir=<папка с SoundSync.exe> /DOutputDir=<dist> soundsync.iss
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
