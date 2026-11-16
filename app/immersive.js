@@ -198,7 +198,7 @@ function updateImmersive() {
   }
   immersiveTitle.textContent = current.title;
   immersiveArtist.textContent = current.artist;
-  immersiveAlbum.textContent = current.album;
+  immersiveAlbum.textContent = albumLabel(current);
   visualStatus.textContent = audio.paused ? 'НА ПАУЗЕ' : 'СЕЙЧАС ЗВУЧИТ';
 }
 function openImmersive() {

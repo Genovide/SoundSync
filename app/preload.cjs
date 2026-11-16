@@ -104,17 +104,11 @@ if (process.platform === 'darwin')
     () => {
       const controls = document.querySelector('.window-actions');
       if (controls) controls.style.display = 'none';
+      // Шапка приложения уступает место кнопкам окна macOS слева.
+      document.body.classList.add('mac-window');
     },
     { once: true }
   );
-
-if (process.platform === 'darwin')
-  window.addEventListener('keydown', (event) => {
-    if (event.metaKey && event.key.toLowerCase() === 'k') {
-      event.preventDefault();
-      document.getElementById('search')?.focus();
-    }
-  });
 
 window.addEventListener(
   'error',

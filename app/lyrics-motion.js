@@ -142,14 +142,7 @@ setLyrics = function (t) {
   }
   lyricBox.replaceChildren();
   if (!lyricLines.length) {
-    lyricBox.append(
-      node('span', 'lyrics-mark', '“'),
-      node(
-        'p',
-        '',
-        'В этом файле пока нет текста.\nМожно положить .lrc или .txt рядом с песней и обновить библиотеку.'
-      )
-    );
+    lyricBox.append(node('span', 'lyrics-mark', '“'), node('p', '', emptyLyricsText(current)));
     return;
   }
   for (const line of lyricLines) {
