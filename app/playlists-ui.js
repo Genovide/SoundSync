@@ -54,6 +54,11 @@
     refresh(null);
     document.querySelector('main').scrollTop = 0;
   };
+  // Открыть конкретный плейлист снаружи (например, после переноса из другого сервиса).
+  window.openPlaylistById = (id) => {
+    nav.onclick();
+    openList(id);
+  };
   function playable(list) {
     return list.filter((t) => !t.missing && !t.playbackUnavailable);
   }
@@ -104,6 +109,9 @@
       }
     } else
       actions.append(
+        control('Перенести из Spotify или Яндекса', 'outline', () =>
+          window.openPlaylistTransfer?.()
+        ),
         control('Импорт из SoundCloud', 'outline', openImport),
         control('+ Создать плейлист', 'primary', () =>
           nameDialog('Новый плейлист', '', async (value) => {
