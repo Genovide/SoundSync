@@ -192,15 +192,9 @@ body.clean-track-view {
     width 900ms cubic-bezier(0.22, 0.8, 0.2, 1),
     transform 900ms cubic-bezier(0.22, 0.8, 0.2, 1);
 }
+/* Пластинка только плавно увеличивается, на месте. */
 #immersive.clean-view .immersive-art {
   width: min(46vh, 520px);
-  transform: translateX(clamp(20px, 3vw, 52px));
-}
-#immersive.clean-view :is(.immersive-title, .immersive-artist) {
-  transform: translateX(clamp(20px, 3vw, 52px));
-}
-#immersive :is(.immersive-title, .immersive-artist) {
-  transition: transform 900ms cubic-bezier(0.22, 0.8, 0.2, 1);
 }
 /* Скрываемые элементы проявляются обратно так же плавно, как гаснут. */
 #immersive > .immersive-top,
