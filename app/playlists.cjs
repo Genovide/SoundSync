@@ -107,8 +107,24 @@ module.exports = function ({
     if (!list) throw Error('Плейлист не найден.');
     return list;
   }
+  let indexedTracks,
+    indexedLength = -1,
+    localIndex = new Map();
   function track(id) {
-    return getLibrary().tracks.find((t) => t.id === id) || getRemoteTrack(id);
+    const tracks = getLibrary().tracks;
+    if (tracks !== indexedTracks || tracks.length !== indexedLength) {
+      indexedTracks = tracks;
+      indexedLength = tracks.length;
+      localIndex = new Map(tracks.map((t) => [t.id, t]));
+    }
+    return localIndex.get(id) || getRemoteTrack(id);
+  }
+  function playlistCover(p) {
+    for (const ref of p.tracks) {
+      const cover = (track(ref.id) || ref).cover;
+      if (cover) return cover;
+    }
+    return '';
   }
   function resolve(ref) {
     const current = track(ref.id);
@@ -133,7 +149,7 @@ module.exports = function ({
       updatedAt: p.updatedAt,
       sourceUrl: p.sourceUrl || '',
       preview: p.tracks.slice(0, 4).map(resolve),
-      cover: p.tracks.map((r) => track(r.id) || r).find((t) => t.cover)?.cover || '',
+      cover: playlistCover(p),
     };
   }
   function curatedMetadata(p) {

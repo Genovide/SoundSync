@@ -1,3 +1,14 @@
+.playlist-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 0;
+}
+.playlist-pagination .playlist-note {
+  margin: 0;
+}
 .playlists-section {
   padding-top: 34px;
   padding-bottom: 32px;

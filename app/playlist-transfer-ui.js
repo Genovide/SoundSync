@@ -346,13 +346,29 @@
     create.textContent = chosen ? `Создать плейлист · ${chosen}` : 'Создать плейлист';
     create.disabled = !chosen;
   }
-  function drawReview() {
+  let reviewLimit = 100;
+  function drawReview(reset = true) {
+    if (reset) reviewLimit = 100;
     // Сначала то, что требует внимания, потом найденное; в пределах групп — исходный порядок.
     const order = { maybe: 0, sure: 1, missing: 2 };
     const rows = results
       .map((r, i) => ({ r, i }))
       .sort((a, b) => order[a.r.verdict] - order[b.r.verdict] || a.i - b.i)
+      .slice(0, reviewLimit)
       .map(({ r }) => row(r));
+    if (results.length > reviewLimit) {
+      const more = node(
+        'button',
+        'outline',
+        `Показать ещё ${Math.min(100, results.length - reviewLimit)}`
+      );
+      more.type = 'button';
+      more.onclick = () => {
+        reviewLimit += 100;
+        drawReview(false);
+      };
+      rows.push(more);
+    }
     $d('.transfer-list').replaceChildren(...rows);
     drawSummary();
   }
@@ -445,6 +461,9 @@
     button.disabled = true;
     try {
       const p = await window.lumen.playlistImportList(name, ids);
+      results = [];
+      searchCache.clear();
+      $d('.transfer-list').replaceChildren();
       task = 'idle';
       showTask();
       dialog.close();
@@ -464,6 +483,9 @@
   $d('[data-create]').onclick = createPlaylist;
   $d('[data-cancel]').onclick = () => {
     run++;
+    results = [];
+    searchCache.clear();
+    $d('.transfer-list').replaceChildren();
     task = 'idle';
     showTask();
     step('source');

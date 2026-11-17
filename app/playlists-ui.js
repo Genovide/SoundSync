@@ -12,6 +12,11 @@
     loading = false,
     error = '',
     request = 0;
+  const PAGE_SIZE = 100;
+  let shownRows = PAGE_SIZE,
+    pageList = null,
+    pageQuery = '',
+    drawnKey = [];
   const control = (label, cls, action) => {
     const b = node('button', cls, label);
     b.type = 'button';
@@ -65,6 +70,19 @@
   }
   function draw() {
     if (view !== 'playlists') return;
+    const query = $('search').value.trim().toLocaleLowerCase();
+    if (pageList !== opened || pageQuery !== query) {
+      shownRows = PAGE_SIZE;
+      pageList = opened;
+      pageQuery = query;
+    }
+    const nextKey = [opened, lists, loading, error, query, shownRows];
+    if (nextKey.every((value, i) => value === drawnKey[i])) {
+      for (const row of section.querySelectorAll('.playlist-row'))
+        row.classList.toggle('playing', row.dataset.trackId === current?.id);
+      return;
+    }
+    drawnKey = nextKey;
     const main = document.querySelector('main'),
       top = main.scrollTop;
     // Keep the shared search input connected while this section is rebuilt.
@@ -189,8 +207,7 @@
       main.scrollTop = top;
       return;
     }
-    const query = $('search').value.trim().toLocaleLowerCase(),
-      all = opened.tracks || [],
+    const all = opened.tracks || [],
       visible = all.filter(
         (t) => !query || (t.title + ' ' + t.artist).toLocaleLowerCase().includes(query)
       ),
@@ -243,10 +260,11 @@
         )
       );
     const rows = node('div', 'playlist-tracks');
-    for (const [i, t] of visible.entries()) {
+    for (const [i, t] of visible.slice(0, shownRows).entries()) {
       const row = node('div', 'track-row playlist-row' + (current?.id === t.id ? ' playing' : '')),
         info = node('button', 'playlist-track-play'),
         text = node('div');
+      row.dataset.trackId = t.id;
       text.append(
         node('strong', '', t.title),
         node('small', '', t.artist + (t.playCount ? ' · ' + t.playCount + ' прослушиваний' : ''))
@@ -275,6 +293,22 @@
       rows.append(row);
     }
     section.append(rows);
+    if (visible.length > shownRows) {
+      const more = control(
+        `Показать ещё ${Math.min(PAGE_SIZE, visible.length - shownRows)}`,
+        'outline playlist-show-more',
+        () => {
+          shownRows += PAGE_SIZE;
+          draw();
+        }
+      );
+      const pagination = node('div', 'playlist-pagination');
+      pagination.append(
+        node('span', 'playlist-note', `Показано ${shownRows} из ${visible.length}`),
+        more
+      );
+      section.append(pagination);
+    }
     main.scrollTop = top;
   }
   const priorRender = render;
@@ -290,6 +324,10 @@
       draw();
     }
   };
+  window.addEventListener('track-card-changed', () => {
+    drawnKey = [];
+    if (view === 'playlists') refresh(opened?.id);
+  });
   const names = node('dialog', 'feedback-dialog playlist-name-dialog');
   names.innerHTML =
     '<form><div class="feedback-heading"><h2 id="playlist-name-title">Новый плейлист</h2><button class="feedback-close" type="button" aria-label="Закрыть">×</button></div><label for="playlist-name">Название</label><input id="playlist-name" required maxlength="100" autocomplete="off" placeholder="Например, В дорогу"><p class="feedback-error" hidden></p><div class="feedback-actions"><button class="primary" type="submit">Сохранить</button></div></form>';
