@@ -2,6 +2,7 @@
 (() => {
   const button = node('button', 'quiet update-button', 'Проверить обновления');
   button.style.marginTop = '12px';
+  button.hidden = true;
   document.querySelector('.sidebar-bottom').append(button);
   let state = 'idle',
     info = null,
@@ -11,6 +12,9 @@
   };
   function setState(next, extra = {}) {
     state = next;
+    // Без обновления кнопка внизу меню не нужна: ручная проверка — в «Настройки» → «Обновления».
+    // Появляется, когда идёт проверка, вышла новая версия или идёт установка.
+    button.hidden = next === 'idle';
     button.classList.toggle('update-available', ['available', 'ready'].includes(next));
     button.classList.toggle('update-downloading', next === 'downloading');
     button.disabled = next === 'checking' || next === 'downloading' || next === 'installing';

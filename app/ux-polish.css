@@ -203,3 +203,8 @@ body.mac-window > .titlebar {
 .home-section-heading .home-reshuffle:disabled {
   opacity: 0.6;
 }
+
+/* Кнопка обновления внизу меню видна, только когда с обновлением есть что делать. */
+.sidebar .update-button[hidden] {
+  display: none !important;
+}
