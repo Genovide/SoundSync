@@ -40,6 +40,7 @@ jobs:
           node scripts/test-soundcloud-import.cjs
           node scripts/test-lyrics-timing.cjs
           node scripts/test-playlist-transfer.cjs
+          node scripts/test-yandex-import.cjs
           node scripts/test-hls-feed.cjs
           node scripts/test-loudness.cjs
           node scripts/test-taste-model.cjs

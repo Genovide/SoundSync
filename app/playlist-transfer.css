@@ -1,4 +1,17 @@
 /* Окно «Перенести плейлист». */
+.transfer-yandex-status {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 2px solid var(--ui-accent, #a5b8cd);
+  border-radius: 4px 10px 10px 4px;
+  background: #ffffff06;
+  color: var(--ui-muted, #aaa);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.transfer-yandex-status:empty {
+  display: none;
+}
 .transfer-dialog {
   width: min(760px, calc(100vw - 36px));
 }

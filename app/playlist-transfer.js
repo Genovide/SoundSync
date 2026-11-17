@@ -13,7 +13,7 @@
   else root.PlaylistTransfer = api;
 })(typeof self !== 'undefined' ? self : this, () => {
   'use strict';
-  const MAX_ITEMS = 2000;
+  const MAX_ITEMS = 10000;
 
   // ——— Разбор ———
   const DURATION = /^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})$/;
@@ -317,6 +317,11 @@
       let artistSim = artist
         ? Math.max(similarity(artist, ca), ct.includes(artist) ? 0.9 : 0)
         : 0.5;
+      if (Array.isArray(item.artists) && artist === ia)
+        artistSim = Math.max(
+          artistSim,
+          ...item.artists.map((name) => similarity(normalize(name), ca))
+        );
       if (!split.length) artistSim = 0;
       return 0.62 * titleSim + 0.38 * artistSim;
     };
@@ -324,6 +329,7 @@
     const itemVariant = VARIANT.test(item.title),
       candVariant = VARIANT.test(candidate.title);
     if (candVariant && !itemVariant) value -= 0.3;
+    if (item.source === 'yandex' && itemVariant && !candVariant) value -= 0.25;
     if (
       Number.isFinite(item.duration) &&
       Number.isFinite(candidate.duration) &&
@@ -331,8 +337,28 @@
     ) {
       const delta = Math.abs(item.duration - candidate.duration);
       if (delta <= 3) value += 0.08;
-      else if (delta > 25) value -= 0.18;
+      else if (delta > 25) {
+        value -= 0.18;
+      }
     }
+    if (
+      item.album &&
+      candidate.album &&
+      !/^(soundcloud|unknown|неизвестный)/i.test(candidate.album)
+    ) {
+      const albumSim = similarity(item.album, candidate.album);
+      if (albumSim > 0.85) value += 0.03;
+      else if (albumSim < 0.3) value -= 0.06;
+    }
+    if (
+      item.source === 'yandex' &&
+      (!ia ||
+        (Number.isFinite(item.duration) &&
+          Number.isFinite(candidate.duration) &&
+          candidate.duration > 0 &&
+          Math.abs(item.duration - candidate.duration) > 25))
+    )
+      value = Math.min(value, SURE - 0.01);
     return Math.max(0, Math.min(1, value));
   }
   const SURE = 0.82,
@@ -346,7 +372,8 @@
   }
   const verdict = (best) =>
     !best ? 'missing' : best.score >= SURE ? 'sure' : best.score >= MAYBE ? 'maybe' : 'missing';
-  const query = (item) => [item.artist, item.title].filter(Boolean).join(' ').slice(0, 200);
+  const query = (item) =>
+    [item.artists?.[0] || item.artist, item.title].filter(Boolean).join(' ').slice(0, 200);
 
   return { parse, normalize, similarity, score, rank, verdict, query, SURE, MAYBE, MAX_ITEMS };
 });

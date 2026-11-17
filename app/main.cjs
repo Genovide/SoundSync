@@ -535,6 +535,7 @@ app
         };
       },
     });
+    require('./yandex-import.cjs')({ ipcMain, getWindow: () => win });
     require('./playlists.cjs')({
       app,
       ipcMain,

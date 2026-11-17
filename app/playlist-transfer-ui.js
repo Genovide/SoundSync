@@ -12,16 +12,16 @@
         <button type="button" class="feedback-close" data-close aria-label="Закрыть">×</button>
       </div>
       <section class="transfer-step" data-step="source">
-        <p class="feedback-intro">Вставь список треков или выбери файл — найдём их в твоей музыке и в SoundCloud. Перед сохранением всё можно проверить.</p>
+        <p class="feedback-intro">Вставь ссылку Яндекс Музыки или список из Spotify — найдём треки в твоей музыке и в SoundCloud. Перед сохранением всё можно проверить.</p>
         <div class="transfer-howto" role="tablist" aria-label="Откуда переносишь">
           <button type="button" role="tab" data-how="yandex" aria-selected="true">Яндекс Музыка</button>
           <button type="button" role="tab" data-how="spotify" aria-selected="false">Spotify</button>
           <button type="button" role="tab" data-how="other" aria-selected="false">Другое</button>
         </div>
         <ol class="transfer-help" data-help="yandex">
-          <li>Открой плейлист на music.yandex.ru в браузере.</li>
-          <li>Выдели мышью список треков от первого до последнего и скопируй (⌘C / Ctrl+C).</li>
-          <li>Вставь сюда — названия, исполнители и длительности распознаются сами.</li>
+          <li>В Яндекс Музыке открой «Мне нравится» или нужный плейлист.</li>
+          <li>Нажми «Поделиться → Скопировать ссылку» и вставь её ниже.</li>
+          <li>Загрузи коллекцию, затем проверь подобранные треки перед сохранением.</li>
         </ol>
         <ol class="transfer-help" data-help="spotify" hidden>
           <li>Открой exportify.app, войди своим аккаунтом Spotify.</li>
@@ -32,11 +32,18 @@
           <li>Подойдёт любой список «Исполнитель — Название», по треку на строку.</li>
           <li>Или файл CSV (TuneMyMusic, Soundiiz) и плейлист M3U.</li>
         </ol>
+        <div data-yandex-source>
+          <label for="transfer-yandex-url">Ссылка на коллекцию или плейлист</label>
+          <input id="transfer-yandex-url" type="url" autocomplete="off" placeholder="https://music.yandex.ru/playlists/…">
+          <p class="transfer-yandex-status" role="status"></p>
+        </div>
+        <div data-list-source hidden>
         <label for="transfer-text">Список треков</label>
         <textarea id="transfer-text" rows="7" spellcheck="false" placeholder="Macan — Кино&#10;Daft Punk — Get Lucky&#10;…"></textarea>
         <div class="transfer-row">
           <label class="outline transfer-file">Выбрать файл<input type="file" accept=".csv,.txt,.m3u,.m3u8,text/plain,text/csv" hidden></label>
           <span class="transfer-parsed" role="status"></span>
+        </div>
         </div>
         <label for="transfer-name">Название плейлиста</label>
         <input id="transfer-name" maxlength="80" placeholder="Например, «Из Яндекса»">
@@ -67,7 +74,9 @@
   let parsed = { name: '', items: [] },
     results = [],
     run = 0,
-    fileName = '';
+    fileName = '',
+    sourceKind = 'yandex',
+    loadedYandexUrl = '';
 
   function step(name) {
     for (const s of $$d('.transfer-step')) s.hidden = s.dataset.step !== name;
@@ -87,7 +96,53 @@
     'yandex-links':
       'Это ссылки на треки без названий. Открой плейлист в браузере, выдели сам список треков и скопируй его.',
   };
+  function syncSource() {
+    $d('[data-yandex-source]').hidden = sourceKind !== 'yandex';
+    $d('[data-list-source]').hidden = sourceKind === 'yandex';
+    $d('[data-search]').textContent =
+      sourceKind === 'yandex' && !loadedYandexUrl ? 'Загрузить коллекцию' : 'Найти треки';
+  }
+  const yandexUrl = $d('#transfer-yandex-url');
+  yandexUrl.addEventListener('input', () => {
+    loadedYandexUrl = '';
+    parsed = { name: '', items: [] };
+    $d('.transfer-yandex-status').textContent = '';
+    syncSource();
+  });
+  async function loadYandex() {
+    const url = yandexUrl.value.trim();
+    if (!url) return fail('Вставь ссылку из меню «Поделиться» в Яндекс Музыке.');
+    const token = ++run;
+    step('search');
+    $d('.transfer-progress-text').textContent = 'Читаем коллекцию Яндекс Музыки…';
+    $d('.transfer-bar i').style.width = '15%';
+    try {
+      const result = await window.lumen.yandexImportRead(url);
+      if (token !== run) return;
+      parsed = result;
+      loadedYandexUrl = url;
+      if (!nameInput.value.trim()) nameInput.value = result.name;
+      step('source');
+      const status = $d('.transfer-yandex-status');
+      status.textContent =
+        `Прочитано ${result.items.length} из ${result.total} треков. Исполнители, альбомы и длительность загружены.` +
+        (result.unavailable
+          ? ` Яндекс не предоставил сведения о ${result.unavailable} треках — они будут пропущены.`
+          : '');
+      if (!result.items.length) fail('В этой коллекции нет доступных сведений о треках.');
+      syncSource();
+    } catch (error) {
+      if (token !== run) return;
+      step('source');
+      fail(cleanError(error));
+      syncSource();
+    }
+  }
   function reparse() {
+    if (sourceKind === 'yandex') {
+      syncSource();
+      return;
+    }
     parsed = T.parse(text.value, fileName);
     if (parsed.hint) parsedLabel.textContent = HINTS[parsed.hint];
     else
@@ -118,6 +173,14 @@
   });
   for (const tab of $$d('[data-how]'))
     tab.onclick = () => {
+      run++;
+      sourceKind = tab.dataset.how;
+      loadedYandexUrl = '';
+      parsed = { name: '', items: [] };
+      $d('.transfer-yandex-status').textContent = '';
+      step('source');
+      reparse();
+      syncSource();
       for (const t of $$d('[data-how]')) t.setAttribute('aria-selected', String(t === tab));
       for (const h of $$d('[data-help]')) h.hidden = h.dataset.help !== tab.dataset.how;
     };
@@ -168,6 +231,8 @@
     return { item, options, choice: 0, verdict, include: verdict === 'sure' };
   }
   async function search() {
+    if (sourceKind === 'yandex' && (!loadedYandexUrl || loadedYandexUrl !== yandexUrl.value.trim()))
+      return loadYandex();
     reparse();
     if (parsed.hint) return fail(HINTS[parsed.hint]);
     if (!parsed.items.length) return fail('Вставь список треков или выбери файл.');
@@ -243,7 +308,11 @@
     const source = node('div', 'transfer-source');
     source.append(
       node('strong', '', r.item.title),
-      node('span', '', [r.item.artist, fmt(r.item.duration)].filter(Boolean).join(' · '))
+      node(
+        'span',
+        '',
+        [r.item.artist, r.item.album, fmt(r.item.duration)].filter(Boolean).join(' · ')
+      )
     );
     const target = node('div', 'transfer-target');
     const chosen = r.options[r.choice]?.track;
@@ -340,11 +409,13 @@
     step('source');
     reparse();
     dialog.showModal();
-    text.focus();
+    syncSource();
+    (sourceKind === 'yandex' ? yandexUrl : text).focus();
   };
   // Для проверок.
   window.runPlaylistTransfer = async (listText, name) => {
     window.openPlaylistTransfer();
+    $d('[data-how="other"]').click();
     text.value = listText;
     nameInput.value = name || '';
     fileName = '';
