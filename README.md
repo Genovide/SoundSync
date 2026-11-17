@@ -8,7 +8,7 @@
 
 ## Скачать SoundSync
 
-**Текущая версия — [1.3.0](https://github.com/Genovide/SoundSync/releases/tag/v1.3.0).** Накопительные апдейты — [Windows x64](https://github.com/Genovide/SoundSync/releases/download/v1.3.0/SoundSync-1.3.0-Update-Windows-x64.zip) и [macOS Apple Silicon](https://github.com/Genovide/SoundSync/releases/download/v1.3.0/SoundSync-1.3.0-Update-macOS-arm64.zip).
+**Текущая версия — [1.3.2](https://github.com/Genovide/SoundSync/releases/tag/v1.3.2).** Накопительные апдейты — [Windows x64](https://github.com/Genovide/SoundSync/releases/download/v1.3.2/SoundSync-1.3.2-Update-Windows-x64.zip) и [macOS Apple Silicon](https://github.com/Genovide/SoundSync/releases/download/v1.3.2/SoundSync-1.3.2-Update-macOS-arm64.zip).
 
 | Система | Первая установка | Уже установлен |
 |---|---|---|
