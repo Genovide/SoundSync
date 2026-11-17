@@ -30,6 +30,46 @@
       }, 430);
     }
   }
+  // «×» на панели: остановить трек и убрать панель совсем (вместе с сохранённым сеансом).
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'dock-close';
+  close.title = 'Закрыть плеер';
+  close.setAttribute('aria-label', 'Закрыть плеер');
+  close.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  player.append(close);
+  function closePlayer() {
+    if (typeof exitImmersive === 'function') exitImmersive();
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    current = null;
+    try {
+      localStorage.removeItem('last-track');
+    } catch {}
+    window.lumen.sessionClear?.();
+    // Правая панель и плеер — как при первом запуске, без следов прошлого трека.
+    const set = (id, text) => {
+      const e = document.getElementById(id);
+      if (e) e.textContent = text;
+    };
+    set('now-title', 'Выбери настроение');
+    set('now-artist', 'И нажми play');
+    set('mini-title', 'Пока тихо');
+    set('mini-artist', 'Твой следующий любимый трек уже здесь');
+    set('elapsed', '0:00');
+    set('duration', '0:00');
+    document.getElementById('now-cover')?.replaceChildren();
+    document.getElementById('mini-cover')?.replaceChildren();
+    const seek = document.getElementById('seek');
+    if (seek) seek.value = 0;
+    if (typeof setLyrics === 'function') setLyrics({ lyrics: '' });
+    if (typeof render === 'function') render();
+    if (typeof renderQueue === 'function') renderQueue();
+    sync();
+  }
+  close.onclick = closePlayer;
   if (typeof load === 'function') {
     const loadBeforeDock = load;
     load = function (t) {

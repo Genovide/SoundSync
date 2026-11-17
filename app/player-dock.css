@@ -190,3 +190,39 @@ body > footer.player.dock-leave > * {
     animation-duration: 1ms;
   }
 }
+
+/* «×» в углу панели: появляется при наведении и с клавиатуры. */
+body > footer.player .dock-close {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #ffffff26;
+  background: rgba(40, 40, 44, 0.85);
+  backdrop-filter: blur(12px);
+  color: #e8e8ec;
+  box-shadow: 0 4px 14px #0007;
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+body > footer.player .dock-close svg {
+  width: 12px;
+  height: 12px;
+}
+body > footer.player:is(:hover, :focus-within) .dock-close {
+  opacity: 1;
+  transform: none;
+}
+body > footer.player .dock-close:hover {
+  background: rgba(70, 70, 76, 0.95);
+}

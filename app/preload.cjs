@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('lumen', {
   petImport: () => ipcRenderer.invoke('companion-import'),
   sessionLoad: () => ipcRenderer.invoke('playback-session-load'),
   sessionState: (state) => ipcRenderer.send('playback-session-state', state),
+  sessionClear: () => ipcRenderer.send('playback-session-clear'),
   onSessionCapture: (fn) => ipcRenderer.on('playback-session-capture', () => fn()),
   storageInfo: (force) => ipcRenderer.invoke('storage-info', force),
   storageClear: (id) => ipcRenderer.invoke('storage-clear', id),
