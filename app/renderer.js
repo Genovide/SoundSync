@@ -459,7 +459,12 @@ addEventListener('resize', resize);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function draw(ms) {
   requestAnimationFrame(draw);
-  if (document.hidden || ms - lastFrame < 32) return;
+  if (
+    document.hidden ||
+    document.body.classList.contains('animated-app-background') ||
+    ms - lastFrame < 32
+  )
+    return;
   lastFrame = ms;
   visualFrames++;
   const motion = effect && !reduced;

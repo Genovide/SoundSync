@@ -54,40 +54,6 @@
   line-height: 1.5;
   margin: 0;
 }
-.incognito-orbit {
-  position: relative;
-  width: 128px;
-  height: 128px;
-  margin: 0 auto 24px;
-  display: grid;
-  place-items: center;
-}
-.incognito-orbit i {
-  position: absolute;
-  inset: 0;
-  border: 1px solid var(--ui-accent, #bbb);
-  border-radius: 42% 58% 61% 39%;
-  opacity: 0.3;
-}
-.incognito-orbit i:nth-child(2) {
-  inset: 12px;
-  transform: rotate(60deg);
-}
-.incognito-orbit i:nth-child(3) {
-  inset: 24px;
-  transform: rotate(120deg);
-}
-.incognito-orbit span {
-  font-size: 38px;
-  color: var(--ui-accent, #ddd);
-}
-.incognito-orbit.is-playing i {
-  animation: incognito-turn 8s linear infinite;
-}
-.incognito-orbit.is-playing i:nth-child(2) {
-  animation-direction: reverse;
-  animation-duration: 6s;
-}
 .incognito-status {
   font-size: 12px;
   min-height: 18px;
@@ -115,6 +81,10 @@
   gap: 8px;
 }
 .incognito-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   min-height: 42px;
   padding: 10px 16px;
   border-radius: 12px;
@@ -126,6 +96,7 @@
 }
 .incognito-result {
   display: flex;
+  align-items: center;
   gap: 14px;
   text-align: left;
   padding: 12px;
@@ -137,21 +108,16 @@
 .incognito-result:hover {
   background: #ffffff08;
 }
-@keyframes incognito-turn {
-  to {
-    transform: rotate(360deg);
-  }
+.incognito-reaction {
+  display: inline-flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .incognito-orbit.is-playing i {
-    animation: none;
-  }
+.incognito-reaction svg {
+  width: 100%;
+  height: 100%;
 }
-
-.incognito-dialog .incognito-orbit > i {
-  width: auto;
-  height: auto;
-  background: transparent;
-  box-shadow: none;
-  margin: 0;
+.incognito-reaction.is-liked svg {
+  fill: currentColor;
 }

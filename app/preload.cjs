@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld('lumen', {
   yandexImportRead: (url) => ipcRenderer.invoke('yandex-import-read', url),
   playlistImportList: (name, ids) => ipcRenderer.invoke('playlists-import-list', name, ids),
   scImportPreview: (url) => ipcRenderer.invoke('sc-import-preview', url),
-  scImportCommit: (token) => ipcRenderer.invoke('sc-import-commit', token),
+  scImportCommit: (token, name) => ipcRenderer.invoke('sc-import-commit', token, name),
   scImportCancel: () => ipcRenderer.invoke('sc-import-cancel'),
   onScImportProgress: (fn) => ipcRenderer.on('sc-import-progress', (_, p) => fn(p)),
   feedbackOpen: (payload) => ipcRenderer.invoke('feedback-open', payload),

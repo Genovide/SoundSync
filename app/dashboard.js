@@ -8,36 +8,65 @@
   homeNav.type = 'button';
   homeNav.innerHTML = '<span>⌂</span>Главная';
   nav.prepend(homeNav);
-  const intro = node(
-    'p',
-    'hero-description',
-    'Любимые треки, новые открытия и твоя коллекция — в одном ритме.'
+  hero.classList.add('start-panel');
+  const startHeader = node('div', 'start-panel-header');
+  const startCopy = node('div', 'start-panel-copy');
+  startCopy.append(
+    node('span', 'start-eyebrow', 'ТВОЙ СЛЕДУЮЩИЙ ТРЕК'),
+    node('h1', '', 'Что включим?')
   );
-  hero.querySelector('h1').innerHTML = 'Открой<br><em>свою музыку</em>';
-  hero.querySelector('h1').after(intro);
-  const statue = node('img', 'hero-statue');
-  statue.src = 'assets/soundsync-statue.png';
-  statue.alt = 'Античная статуя в наушниках SoundSync';
-  statue.draggable = false;
-  hero.append(statue);
-  // Большой баннер — только при первом знакомстве. Дальше он компактный и не занимает полэкрана.
-  let heroSeen = false;
-  try {
-    heroSeen = localStorage.getItem('home-hero-seen') === '1';
-    localStorage.setItem('home-hero-seen', '1');
-  } catch {}
-  hero.classList.toggle('hero-compact', heroSeen);
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  hero.addEventListener('pointermove', (e) => {
-    if (reducedMotion.matches || e.pointerType === 'touch') return;
-    const r = hero.getBoundingClientRect();
-    hero.style.setProperty('--statue-x', ((e.clientX - r.left) / r.width - 0.5) * 7 + 'px');
-    hero.style.setProperty('--statue-y', ((e.clientY - r.top) / r.height - 0.5) * -5 + 'px');
-  });
-  hero.addEventListener('pointerleave', () => {
-    hero.style.setProperty('--statue-x', '0px');
-    hero.style.setProperty('--statue-y', '0px');
-  });
+  startHeader.append(
+    startCopy,
+    node('p', 'start-panel-hint', 'Твоя коллекция, любимое и новые открытия')
+  );
+  const startActions = node('div', 'start-panel-actions');
+  const startChoices = [
+    [
+      'Моя музыка',
+      'Перемешать библиотеку',
+      '<path d="M4 7h3l10 10h3M16 14l4 3-4 3M4 17h3l4-4m3-3 3-3h3m-4-3 4 3-4 3"/>',
+      () => {
+        if (!library.tracks.length) return choose();
+        shuffle = true;
+        $('shuffle').classList.add('active');
+        playList([...library.tracks], Math.floor(Math.random() * library.tracks.length));
+      },
+    ],
+    [
+      'Любимое',
+      'То, что хочется повторить',
+      '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>',
+      () => {
+        leave();
+        document.querySelector('[data-view="favorites"]').click();
+      },
+    ],
+    [
+      'Моя волна',
+      'Найди новое настроение',
+      '<path d="M4 12h2m3-5v10m3-14v18m3-14v10m3-5h2"/>',
+      () => {
+        waveOrb.click();
+      },
+    ],
+  ];
+  for (const [title, subtitle, shape, action] of startChoices) {
+    const button = node('button', 'start-choice');
+    button.type = 'button';
+    const icon = node('span', 'start-choice-icon');
+    icon.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      shape +
+      '</svg>';
+    const copy = node('span', 'start-choice-copy');
+    copy.append(node('strong', '', title), node('small', '', subtitle));
+    const arrow = node('span', 'start-choice-arrow', '↗');
+    arrow.setAttribute('aria-hidden', 'true');
+    button.append(icon, copy, arrow);
+    button.onclick = action;
+    startActions.append(button);
+  }
+  hero.append(startHeader, startActions);
   const homeContent = node('div', 'home-content');
   hero.after(homeContent);
   const heading = (title, action) => {
@@ -166,49 +195,6 @@
   function drawHome() {
     const scrollTop = main.scrollTop;
     homeContent.replaceChildren();
-    const picks = node('div', 'home-picks');
-    const choices = [
-      [
-        'Твой поток',
-        'Знакомое звучит по-новому',
-        'flow',
-        () => {
-          $('shuffle-all').click();
-        },
-      ],
-      [
-        'Моя волна',
-        'Найди новое настроение',
-        'wave',
-        () => {
-          if (typeof waveDialog !== 'undefined') waveDialog.showModal();
-        },
-      ],
-      [
-        'Любимое',
-        'То, что хочется повторить',
-        'love',
-        () => {
-          leave();
-          document.querySelector('[data-view="favorites"]').click();
-        },
-      ],
-    ];
-    for (const [title, subtitle, cls, action] of choices) {
-      const b = node('button', 'home-pick ' + cls),
-        text = node('div');
-      text.append(node('strong', '', title), node('small', '', subtitle));
-      b.append(
-        node('span', 'pick-symbol', cls === 'flow' ? '≋' : cls === 'wave' ? '✦' : '♡'),
-        text,
-        node('span', 'pick-play', '▶')
-      );
-      // На узких окнах подпись обрезается многоточием; целиком — в подсказке.
-      b.title = title + ' — ' + subtitle;
-      b.onclick = action;
-      picks.append(b);
-    }
-    homeContent.append(heading('Твой следующий вайб'), picks);
     if (randomSource !== JSON.stringify(library.tracks.map((t) => t.id))) refreshRandom();
     const list = randomIds.map((id) => library.tracks.find((t) => t.id === id)).filter(Boolean);
     const randomHeading = heading('Случайные треки', () => {

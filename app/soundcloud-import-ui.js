@@ -8,7 +8,7 @@
   const modal = node('dialog', 'feedback-dialog sc-import-dialog');
   modal.id = 'sc-import-dialog';
   modal.innerHTML =
-    '<form id="sc-import-form"><div class="feedback-heading"><div><span class="feedback-eyebrow">ПЕРЕНЕСИ ЛЮБИМУЮ МУЗЫКУ</span><h2>Импорт из SoundCloud</h2></div><button type="button" id="sc-import-close" class="feedback-close" aria-label="Закрыть">×</button></div><p class="feedback-intro">Добавим отдельно лайкнутые песни в любимое SoundSync. Существующие треки сохранятся, дубли пропустим. Аудиофайлы не скачиваются.</p><label for="sc-import-url">Ссылка на профиль или его лайки</label><input id="sc-import-url" type="url" required placeholder="https://soundcloud.com/имя-профиля" autocomplete="off"><p class="feedback-privacy">Подходит публичная ссылка на профиль или /имя-профиля/likes. Ссылка /you/likes не содержит имя пользователя. Пароль и вход в SoundCloud не нужны.</p><p id="sc-import-status" role="status"></p><p id="sc-import-error" class="feedback-error" role="alert" hidden></p><section id="sc-import-preview" hidden></section><div class="feedback-actions"><button type="button" id="sc-import-cancel" class="outline" hidden>Отменить загрузку</button><button id="sc-import-load" class="outline" type="submit">Загрузить список</button><button id="sc-import-add" class="primary" type="button" hidden>Добавить в любимое</button></div></form>';
+    '<form id="sc-import-form"><div class="feedback-heading"><div><span class="feedback-eyebrow">ПЕРЕНЕСИ ЛЮБИМУЮ МУЗЫКУ</span><h2>Импорт из SoundCloud</h2></div><button type="button" id="sc-import-close" class="feedback-close" aria-label="Закрыть">×</button></div><p class="feedback-intro">Сохраним лайкнутые песни профиля в отдельный плейлист SoundSync. Повторы пропустим. Аудиофайлы не скачиваются.</p><label for="sc-import-url">Ссылка на профиль или его лайки</label><input id="sc-import-url" type="url" required placeholder="https://soundcloud.com/имя-профиля" autocomplete="off"><p class="feedback-privacy">Подходит публичная ссылка на профиль или /имя-профиля/likes. Ссылка /you/likes не содержит имя пользователя. Пароль и вход в SoundCloud не нужны.</p><p id="sc-import-status" role="status"></p><p id="sc-import-error" class="feedback-error" role="alert" hidden></p><section id="sc-import-preview" hidden></section><div class="feedback-actions"><button type="button" id="sc-import-cancel" class="outline" hidden>Отменить загрузку</button><button id="sc-import-load" class="outline" type="submit">Загрузить список</button><button id="sc-import-add" class="primary" type="button" hidden>Создать плейлист</button></div></form>';
   document.body.append(modal);
   const q = (id) => modal.querySelector('#' + id);
   let preview = null,
@@ -27,7 +27,7 @@
     refreshButton();
   };
   refreshButton();
-  launch.onclick = () => {
+  window.openSoundCloudLikesImport = launch.onclick = () => {
     modal.showModal();
     q('sc-import-url').focus();
   };
@@ -45,7 +45,7 @@
   modal.addEventListener('cancel', cancel);
   q('sc-import-cancel').onclick = () => {
     cancel();
-    q('sc-import-status').textContent = 'Загрузка отменена. Любимое не изменено.';
+    q('sc-import-status').textContent = 'Загрузка отменена. Плейлист не создан.';
   };
   window.lumen.onScImportProgress((p) => {
     if (loading)
@@ -80,7 +80,7 @@
         node(
           'p',
           '',
-          `Доступных треков: ${result.found}. Уже в любимом: ${result.already}. Можно добавить: ${result.toAdd}.`
+          `Доступных треков: ${result.found}. В плейлист: ${result.toAdd}. Повторов: ${result.duplicates}.`
         )
       );
       if (result.stats.unavailable || result.stats.playlists || result.excluded)
@@ -99,17 +99,25 @@
             `Счётчик профиля: ${result.profile.likes}; SoundCloud вернул ${result.stats.scanned} публичных элементов. Часть лайков сервис не предоставил.`
           )
         );
+      const label = node('label', '', 'Название плейлиста');
+      label.htmlFor = 'sc-import-name';
+      const name = node('input');
+      name.id = 'sc-import-name';
+      name.maxLength = 100;
+      name.required = true;
+      name.value = ('SoundCloud · ' + result.profile.name).slice(0, 100);
+      box.append(label, name);
       const list = node('ul', 'sc-import-sample');
       for (const t of result.sample) list.append(node('li', '', t.title + ' — ' + t.artist));
       box.append(list);
       box.hidden = false;
-      q('sc-import-status').textContent = 'Проверь профиль перед добавлением.';
-      q('sc-import-add').textContent = `Добавить ${result.toAdd} в любимое`;
+      q('sc-import-status').textContent = 'Проверь профиль и название плейлиста.';
+      q('sc-import-add').textContent = `Создать плейлист · ${result.toAdd} треков`;
       q('sc-import-add').hidden = !result.toAdd;
     } catch (error) {
       if (token === generation) {
         showError(error);
-        q('sc-import-status').textContent = 'Любимое не изменено.';
+        q('sc-import-status').textContent = 'Плейлист не создан.';
       }
     } finally {
       if (token === generation) {
@@ -124,20 +132,14 @@
     const b = q('sc-import-add');
     b.disabled = true;
     try {
-      const result = await window.lumen.scImportCommit(preview.token);
-      for (const t of result.tracks) {
-        remoteFavoriteTracks.set(t.id, t);
-        favorites.add(t.id);
-      }
-      cacheRemoteFavorites();
-      persistFavoriteIds();
-      render();
-      updateFavorite();
+      const name = q('sc-import-name');
+      if (!name.reportValidity()) return;
+      const result = await window.lumen.scImportCommit(preview.token, name.value.trim());
       preview = null;
       b.hidden = true;
-      q('sc-import-status').textContent =
-        `Готово: добавлено ${result.added}, уже было ${result.already}.`;
-      toast('Добавлено в любимое: ' + result.added);
+      modal.close();
+      toast(`Плейлист «${result.name}» создан: ${result.added} треков`);
+      window.openPlaylistById?.(result.id);
     } catch (e) {
       showError(e);
     } finally {

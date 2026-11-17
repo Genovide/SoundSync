@@ -89,10 +89,39 @@
 
   // ——— Внешний вид ———
   const look = section('Внешний вид');
+  const background = window.SoundSyncBackground;
+  const backgroundSelect = el('select', 'settings-select');
+  backgroundSelect.id = 'settings-app-background';
+  backgroundSelect.setAttribute('aria-label', 'Фон приложения');
+  for (const option of background.options)
+    backgroundSelect.append(new Option(option.name, option.value));
+  row(look, 'Фон приложения', backgroundSelect, 'Для всего интерфейса: меню, страницы и плеер');
+  const backgroundWarning = el(
+    'p',
+    'settings-background-warning',
+    'АНИМИРОВАННЫЙ ФОН ТРЕБУЕТ РЕСУРСОВ ВИДЕОКАРТЫ И МОЖЕТ ВЫЗЫВАТЬ ЛАГИ. На ноутбуках может увеличиться расход батареи. Если приложение тормозит, выбери «По обложке трека».'
+  );
+  backgroundWarning.id = 'settings-background-warning';
+  backgroundSelect.setAttribute('aria-describedby', backgroundWarning.id);
+  const backgroundError = el('span', 'settings-background-error');
+  backgroundError.setAttribute('role', 'status');
+  backgroundWarning.append(backgroundError);
+  look.append(backgroundWarning);
   const gradients = toggle(!document.body.classList.contains('flat-theme'), (on) =>
     typeof setFlatTheme === 'function' ? setFlatTheme(!on) : null
   );
   row(look, 'Градиенты и подсветка', gradients.wrap, 'Цветной фон по обложке трека');
+  function refreshBackground() {
+    const state = background.get();
+    backgroundSelect.value = state.mode;
+    backgroundWarning.hidden = state.mode === 'cover';
+    backgroundError.textContent = state.error;
+    gradients.input.disabled = state.mode !== 'cover';
+    gradients.wrap.title = state.mode !== 'cover' ? 'Цвета задаёт выбранная анимация' : '';
+  }
+  backgroundSelect.onchange = () => background.set(backgroundSelect.value);
+  addEventListener('app-background-change', refreshBackground);
+  refreshBackground();
   const splash = toggle(store.get('splash-enabled', '1') !== '0', (on) =>
     store.set('splash-enabled', on ? '1' : '0')
   );
@@ -455,6 +484,7 @@
 
   // ——— Открытие ———
   function refresh() {
+    refreshBackground();
     resume.input.checked = window.SoundSyncResume.enabled;
     loadStorage();
     gradients.input.checked = !document.body.classList.contains('flat-theme');

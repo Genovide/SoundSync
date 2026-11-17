@@ -74,48 +74,79 @@ const track = (id) => ({
       cancelled: () => true,
     })
   );
-  const handlers = new Map(),
-    sender = { id: 1, send: () => {}, isDestroyed: () => false },
-    saved = new Map([['sc-1', track(1)]]);
-  let writes = 0,
+  const fs = require('node:fs/promises'),
+    path = require('node:path'),
+    os = require('node:os');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'soundsync-likes-playlist-'));
+  try {
+    const handlers = new Map(),
+      sender = { id: 1, send() {}, isDestroyed: () => false };
+    const saved = new Map([['sc-1', track(1)]]),
+      remote = new Map();
+    const preferences = JSON.stringify({ favoriteIds: ['local-2', 'sc-1'] });
+    await fs.writeFile(path.join(root, 'ui-preferences.json'), preferences);
+    const options = {
+      app: { getPath: () => root },
+      ipcMain: { handle: (key, fn) => handlers.set(key, fn) },
+      getWindow: () => ({ webContents: sender }),
+      getLibrary: () => ({ tracks: [{ id: 'local-2', soundcloudId: '2' }] }),
+      getRemoteTrack: (id) => remote.get(id),
+      registerRemote: (tracks) =>
+        tracks.map((t) => {
+          remote.set(t.id, t);
+          return t;
+        }),
+    };
+    const playlists = require('../app/playlists.cjs')(options);
+    let fail = false;
+    setup({
+      ...options,
+      readLikes: async () => ({
+        ...read,
+        tracks: [track(1), track(2), track(3), track(4), track(1)],
+      }),
+      isExcluded: (t) => t.id === 'sc-4',
+      createPlaylist: async (...args) => {
+        if (fail) throw Error('disk full');
+        return playlists.importTracks(...args);
+      },
+    });
+    const call = (key, ...args) => handlers.get(key)({ sender }, ...args);
+    await assert.rejects(() => handlers.get('sc-import-preview')({ sender: {} }, 'url'));
+    let preview = await call('sc-import-preview', 'url');
+    assert.equal(preview.duplicates, 1);
+    assert.equal(preview.excluded, 1);
+    assert.equal(preview.toAdd, 3, 'Existing local and remote favorites must be included');
+    assert.equal((await call('playlists-list')).filter((p) => !p.builtin).length, 0);
+    const imported = await call('sc-import-commit', preview.token, 'SoundCloud collection');
+    assert.equal(imported.added, 3);
+    assert.equal(imported.name, 'SoundCloud collection');
+    assert.deepEqual(
+      (await call('playlists-get', imported.id)).tracks.map((t) => t.id),
+      ['sc-1', 'sc-2', 'sc-3']
+    );
+    assert.equal(saved.size, 1, 'Import never changes existing favorites');
+    assert.equal(await fs.readFile(path.join(root, 'ui-preferences.json'), 'utf8'), preferences);
+    await assert.rejects(() => call('sc-import-commit', preview.token), /устарел/);
+    preview = await call('sc-import-preview', 'url');
+    fail = true;
+    await assert.rejects(() => call('sc-import-commit', preview.token), /disk full/);
+    assert.equal((await call('playlists-list')).filter((p) => !p.builtin).length, 1);
     fail = false;
-  setup({
-    ipcMain: { handle: (key, fn) => handlers.set(key, fn) },
-    getWindow: () => ({ webContents: sender }),
-    readLikes: async () => ({ ...read, tracks: [track(1), track(2), track(3), track(4)] }),
-    getFavorites: () => saved,
-    getLibrary: () => ({ tracks: [{ id: 'local-2', soundcloudId: '2' }] }),
-    readFavoriteIds: async () => ['local-2'],
-    isExcluded: (t) => t.id === 'sc-4',
-    register: (x) => x,
-    persist: async () => {
-      if (fail) throw Error('disk full');
-      writes++;
-    },
-  });
-  await assert.rejects(() => handlers.get('sc-import-preview')({ sender: {} }, 'url'));
-  assert.equal(writes, 0);
-  let preview = await handlers.get('sc-import-preview')({ sender }, 'url');
-  assert.equal(preview.already, 2);
-  assert.equal(preview.excluded, 1);
-  assert.equal(preview.toAdd, 1);
-  assert.equal(saved.size, 1, 'Preview never changes favorites');
-  const imported = await handlers.get('sc-import-commit')({ sender }, preview.token);
-  assert.equal(imported.added, 1);
-  assert.ok(saved.has('sc-3'));
-  assert.equal(writes, 1);
-  preview = await handlers.get('sc-import-preview')({ sender }, 'url');
-  assert.equal(preview.toAdd, 0);
-  assert.equal((await handlers.get('sc-import-commit')({ sender }, preview.token)).added, 0);
-  saved.delete('sc-3');
-  preview = await handlers.get('sc-import-preview')({ sender }, 'url');
-  fail = true;
-  await assert.rejects(() => handlers.get('sc-import-commit')({ sender }, preview.token));
-  assert.ok(!saved.has('sc-3'), 'Failed persistence rolls back new favorites');
-  assert.ok(saved.has('sc-1'));
-  console.log(
-    'SoundCloud import passed: safe profile links, pagination, cancellation, unavailable/playlist handling, preview, sender checks, existing local/remote favorites, repeat import and failed-write rollback'
-  );
+    const retry = await call('sc-import-commit', preview.token);
+    assert.equal(retry.added, 3, 'Failed save can be retried without losing the preview');
+    await playlists.flush();
+    const disk = JSON.parse(await fs.readFile(path.join(root, 'playlists.json'), 'utf8'));
+    assert.equal(disk.playlists.length, 2);
+    assert.equal(disk.playlists[0].tracks.length, 3);
+    assert.equal(disk.playlists[0].tracks[0].pageUrl, track(1).pageUrl);
+    assert.equal(disk.playlists[0].sourceUrl, read.profile.url);
+    console.log(
+      'SoundCloud import passed: safe links, pagination, cancellation, separate persisted playlists, complete metadata, existing favorites included and unchanged, duplicate filtering, consumed tokens and failed-save retry'
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
 })().catch((e) => {
   console.error(e);
   process.exitCode = 1;

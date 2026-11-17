@@ -70,6 +70,7 @@ module.exports = function setupSoundCloud({
   isAligning,
   send,
   applyTrackCard = (t) => t,
+  createImportedPlaylist,
   fetchImpl = fetch,
   workerImpl,
   trashItem = (file) => require('electron').shell.trashItem(file),
@@ -980,23 +981,8 @@ module.exports = function setupSoundCloud({
     ipcMain,
     getWindow,
     readLikes: (url, options) => fast.likes(url, options),
-    getFavorites: () => savedFavorites,
-    getLibrary,
-    readFavoriteIds: async () => {
-      try {
-        return (
-          JSON.parse(
-            await fs.readFile(path.join(app.getPath('userData'), 'ui-preferences.json'), 'utf8')
-          ).favoriteIds || []
-        );
-      } catch {
-        return [];
-      }
-    },
     isExcluded,
-    register,
-    persist: persistFavorites,
-    onAdd: (id) => favoriteRevisions.set(id, (favoriteRevisions.get(id) || 0) + 1),
+    createPlaylist: (...args) => createImportedPlaylist(...args),
   });
   ipcMain.handle('sc-favorite-set', async (_, id, liked) => {
     await initial;

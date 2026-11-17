@@ -38,10 +38,11 @@
   const dialog = make('dialog', 'incognito-dialog');
   dialog.innerHTML = `<header class="incognito-header"><div><span class="incognito-eyebrow">ТОЛЬКО ТЫ И ЗВУК</span><h2>Музыкальный инкогнито</h2></div><button type="button" class="quiet incognito-close" aria-label="Закрыть">×</button></header>
     <p class="incognito-intro">Пять треков без имён и обложек. Сначала впечатление — потом раскрытие.</p>
-    <div class="incognito-stage"><div class="incognito-orbit" aria-hidden="true"><i></i><i></i><i></i><span>?</span></div><span class="incognito-count"></span><h3 class="incognito-title">Доверься слуху</h3><p class="incognito-detail">Новые записи и одно забытое знакомство из твоей музыки.</p></div>
+    <div class="incognito-stage"><div class="incognito-art" aria-hidden="true"></div><span class="incognito-count"></span><h3 class="incognito-title">Доверься слуху</h3><p class="incognito-detail">Новые записи и одно забытое знакомство из твоей музыки.</p></div>
     <p class="incognito-status" role="status"></p><div class="incognito-progress"><i></i></div><div class="incognito-actions"></div><div class="incognito-results"></div>`;
   document.body.append(dialog);
   const q = (s) => dialog.querySelector(s);
+  const artwork = window.createIncognitoArt(q('.incognito-art'));
   const preview = new Audio();
   preview.preload = 'metadata';
   let sessionActive = false;
@@ -55,6 +56,23 @@
     started = false,
     timer = null;
   const votes = [];
+  function reactionIcon(kind) {
+    const box = make('span', 'incognito-reaction');
+    box.setAttribute('aria-hidden', 'true');
+    const path =
+      kind === 'skip'
+        ? '<path d="m12 3-2 5 4 3-4 4 2 6"/><path d="M12 4.5C7-1 0 5 4 11l8 10 8-10c4-6-3-12-8-6.5Z"/>'
+        : kind === 'full'
+          ? '<path d="m8 4 12 8-12 8Z"/>'
+          : '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>';
+    box.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+    return box;
+  }
+  function favoriteLabel(button, liked) {
+    const icon = reactionIcon('like');
+    icon.classList.toggle('is-liked', liked);
+    button.replaceChildren(icon, make('span', '', liked ? 'В любимом' : 'В любимое'));
+  }
   function action(label, fn, primary = false) {
     const b = make('button', primary ? 'primary' : 'outline', label);
     b.type = 'button';
@@ -68,7 +86,7 @@
     preview.pause();
     preview.removeAttribute('src');
     preview.load();
-    q('.incognito-orbit').classList.remove('is-playing');
+    artwork.setPlaying(false);
   }
   function status(text) {
     q('.incognito-status').textContent = text;
@@ -76,6 +94,7 @@
   function open() {
     if (!dialog.open) {
       dialog.showModal();
+      artwork.resume();
       if (rounds.length && index < rounds.length && !revealed) round();
     }
   }
@@ -146,7 +165,7 @@
     q('.incognito-count').textContent = `${index + 1} / ${rounds.length}`;
     q('.incognito-title').textContent = 'Кто скрывается за звуком?';
     q('.incognito-detail').textContent = 'Без подсказок. Просто послушай.';
-    q('.incognito-orbit span').textContent = '?';
+    artwork.reset(index + 1);
     q('.incognito-progress i').style.width = '0%';
     q('.incognito-actions').replaceChildren();
     status('Загружаем фрагмент…');
@@ -180,9 +199,10 @@
     started = true;
     play();
   });
-  preview.addEventListener('playing', () => q('.incognito-orbit').classList.add('is-playing'));
-  preview.addEventListener('pause', () => q('.incognito-orbit').classList.remove('is-playing'));
+  preview.addEventListener('playing', () => artwork.setPlaying(true));
+  preview.addEventListener('pause', () => artwork.setPlaying(false));
   preview.addEventListener('error', () => {
+    artwork.setPlaying(false);
     if (dialog.open && rounds.length)
       status('Запись сейчас недоступна. Повтори запуск или раскрой её.');
   });
@@ -203,7 +223,7 @@
     stop();
     q('.incognito-title').textContent = t.title;
     q('.incognito-detail').textContent = t.artist + (t.album ? ' · ' + t.album : '');
-    q('.incognito-orbit span').textContent = vote === 'like' ? '♡' : '♫';
+    artwork.reveal(t);
     status(
       t.remote ? 'Новое знакомство из SoundCloud' : 'Этот трек уже в твоей библиотеке. Узнал?'
     );
@@ -227,13 +247,14 @@
           remoteFavoriteTracks.set(t.id, t);
         localStorage.setItem('favorites', JSON.stringify([...favorites]));
         await window.lumen.preferencesSet({ favoriteIds: [...favorites] });
-        save.textContent = '♥ В любимом';
+        favoriteLabel(save, true);
       } catch {
         status('Не удалось сохранить. Попробуй ещё раз.');
       } finally {
         save.disabled = false;
       }
     });
+    favoriteLabel(save, favorites.has(t.id));
     action(
       index + 1 < rounds.length ? 'Следующий →' : 'Итоги',
       () => {
@@ -245,6 +266,7 @@
   }
   function finish() {
     stop();
+    artwork.summary();
     q('.incognito-count').textContent = 'СЕАНС ЗАВЕРШЁН';
     q('.incognito-title').textContent = 'Твои впечатления';
     q('.incognito-detail').textContent = 'Вот кто был по ту сторону звука.';
@@ -254,10 +276,7 @@
     for (const { track: t, vote } of votes) {
       const b = make('button', 'incognito-result');
       b.type = 'button';
-      b.append(
-        make('span', '', vote === 'like' ? '♡' : vote === 'full' ? '▶' : '—'),
-        make('span', '', t.title + ' · ' + t.artist)
-      );
+      b.append(reactionIcon(vote), make('span', '', t.title + ' · ' + t.artist));
       b.onclick = () => {
         resume = false;
         dialog.close();
@@ -271,6 +290,7 @@
   dialog.addEventListener('close', () => {
     token++;
     stop();
+    artwork.stop();
     if (resume && current === oldTrack) audio.play().catch(() => {});
     resume = false;
     sessionActive = false;

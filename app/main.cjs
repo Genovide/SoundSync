@@ -493,6 +493,7 @@ app
     await alignmentEngine.restore(library.tracks);
     allow();
     require('./lyrics-search.cjs')({ app, ipcMain });
+    let playlistStore;
     soundcloud = require('./soundcloud.cjs')({
       app,
       ipcMain,
@@ -504,6 +505,7 @@ app
       refreshAllowed: allow,
       readTrack: readLocalTrack,
       applyTrackCard: trackCards.restore,
+      createImportedPlaylist: (...args) => playlistStore.importTracks(...args),
       isAligning: (id) => scanBusy || alignmentEngine.isAligning(id),
       send: (channel, data) => win?.webContents.send(channel, data),
     });
@@ -536,7 +538,7 @@ app
       },
     });
     require('./yandex-import.cjs')({ ipcMain, getWindow: () => win });
-    require('./playlists.cjs')({
+    playlistStore = require('./playlists.cjs')({
       app,
       ipcMain,
       getWindow: () => win,

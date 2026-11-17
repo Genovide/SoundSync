@@ -460,8 +460,13 @@
   };
   const importer = node('dialog', 'feedback-dialog playlist-import-dialog');
   importer.innerHTML =
-    '<form><div class="feedback-heading"><h2>Импорт плейлиста</h2><button type="button" class="feedback-close" aria-label="Закрыть">×</button></div><p class="playlist-note">Сохраним подборку в SoundSync. Треки не скачиваются и не добавляются в любимое автоматически.</p><label for="playlist-import-url">Публичная ссылка SoundCloud</label><input id="playlist-import-url" type="url" required placeholder="https://soundcloud.com/artist/sets/playlist"><p class="feedback-error" hidden></p><div class="playlist-import-preview"></div><div class="feedback-actions"><button type="submit" class="outline">Загрузить список</button><button type="button" class="primary" hidden>Создать плейлист</button></div></form>';
+    '<form><div class="feedback-heading"><h2>Импорт плейлиста</h2><button type="button" class="feedback-close" aria-label="Закрыть">×</button></div><p class="playlist-note">Сохраним подборку в SoundSync. Треки не скачиваются и не добавляются в любимое автоматически.</p><button type="button" class="outline playlist-import-likes">Импорт лайков профиля</button><label for="playlist-import-url">Ссылка на плейлист SoundCloud</label><input id="playlist-import-url" type="url" required placeholder="https://soundcloud.com/artist/sets/playlist"><p class="feedback-error" hidden></p><div class="playlist-import-preview"></div><div class="feedback-actions"><button type="submit" class="outline">Загрузить список</button><button type="button" class="primary" hidden>Создать плейлист</button></div></form>';
   document.body.append(importer);
+  importer.querySelector('.playlist-import-likes').onclick = () => {
+    importGeneration++;
+    importer.close();
+    window.openSoundCloudLikesImport?.();
+  };
   let imported = null,
     importGeneration = 0;
   function openImport() {

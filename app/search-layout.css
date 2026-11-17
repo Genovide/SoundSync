@@ -1,0 +1,203 @@
+body.search-layout main > .topline,
+body.search-layout .dashboard-back {
+  display: none !important;
+}
+body.search-layout .section-search[hidden] {
+  display: none !important;
+}
+body.search-layout .section-search {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  width: min(650px, 65%);
+  align-items: stretch;
+  margin: 0 0 0 auto;
+}
+body.search-layout .hero .section-search.home-search {
+  width: 100%;
+  margin: 20px 0 0;
+}
+body.search-layout .section-search .local-search-field {
+  display: flex;
+  visibility: visible;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  height: 50px;
+  padding: 0;
+  border: 1px solid var(--ui-border, #ffffff20);
+  border-radius: 14px;
+  background: var(--surface, #161616);
+  box-shadow: none;
+}
+body.search-layout .section-search .local-search-field:focus-within {
+  border-color: var(--ui-accent, #a5b8cd);
+  outline: 2px solid color-mix(in srgb, var(--ui-accent, #a5b8cd) 18%, transparent);
+  outline-offset: 2px;
+}
+body.search-layout .local-search-field > span,
+body.search-layout .local-search-field > kbd {
+  display: none;
+}
+body.search-layout .local-search-field #search {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text, #eee);
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  outline: 0;
+  box-shadow: none;
+}
+body.search-layout .local-search-field #search::placeholder {
+  color: var(--ui-muted, #82828c);
+}
+body.search-layout .section-search > .section-search-submit,
+body.search-layout .sc-search > button[type='submit'] {
+  flex: 0 0 auto;
+  min-width: 90px;
+  min-height: 50px;
+  height: 50px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--ui-accent, #a5b8cd);
+  color: var(--surface, #111);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: none;
+  transition: filter 0.15s ease;
+}
+body.search-layout .section-search-submit:hover,
+body.search-layout .sc-search > button[type='submit']:hover {
+  filter: brightness(1.1);
+}
+body.search-layout .section-search-submit:focus-visible {
+  outline: 2px solid var(--ui-accent, #a5b8cd);
+  outline-offset: 3px;
+}
+body.search-layout .collection-search-header {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+body.search-layout .sc-search {
+  gap: 12px;
+  align-items: stretch;
+}
+body.search-layout .sc-search > input,
+body.search-layout .sc-search > select {
+  min-width: 0;
+  min-height: 50px;
+  height: 50px;
+  padding: 0 18px;
+  border: 1px solid var(--ui-border, #ffffff20);
+  border-radius: 14px;
+  background: var(--surface, #161616);
+  color: var(--text, #eee);
+  font: inherit;
+  font-size: 14px;
+}
+@media (max-width: 1100px) {
+  body.search-layout .collection-search-header .section-search {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 800px) {
+  body.search-layout .section-search {
+    gap: 8px;
+  }
+  body.search-layout .section-search > .section-search-submit {
+    min-width: 76px;
+    padding: 0 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.search-layout .section-search-submit {
+    transition: none;
+  }
+}
+
+/* Playlist heading keeps creation separate from search and import tools. */
+body.search-layout .playlist-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 24px;
+  margin-bottom: 28px;
+}
+body.search-layout .playlist-heading > div:first-child {
+  min-width: 0;
+}
+body.search-layout .playlist-create-action {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 44px;
+  padding: 0 20px;
+  white-space: nowrap;
+}
+body.search-layout .playlist-heading .playlist-search-intro {
+  grid-column: 1 / -1;
+  margin: 0;
+  max-width: 800px;
+  line-height: 1.6;
+}
+body.search-layout .playlist-search-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  margin-top: 10px;
+}
+body.search-layout .playlist-search-toolbar .section-search {
+  flex: 1 1 360px;
+  width: auto;
+  margin: 0;
+}
+body.search-layout .playlist-search-toolbar .playlist-actions {
+  flex: 0 1 auto;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+body.search-layout .playlist-search-toolbar .playlist-actions button {
+  font-size: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+@media (max-width: 1250px) {
+  body.search-layout .playlist-search-toolbar {
+    flex-wrap: wrap;
+  }
+  body.search-layout .playlist-search-toolbar .section-search {
+    flex-basis: 100%;
+  }
+  body.search-layout .playlist-search-toolbar .playlist-actions {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 800px) {
+  body.search-layout .playlist-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  body.search-layout .playlist-create-action {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+  body.search-layout .playlist-search-toolbar {
+    margin-top: 2px;
+  }
+}

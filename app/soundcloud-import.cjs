@@ -1,44 +1,29 @@
 const crypto = require('node:crypto');
-module.exports = function ({
-  ipcMain,
-  getWindow,
-  readLikes,
-  getFavorites,
-  getLibrary,
-  readFavoriteIds,
-  isExcluded,
-  register,
-  persist,
-  onAdd = () => {},
-}) {
+module.exports = function ({ ipcMain, getWindow, readLikes, isExcluded, createPlaylist }) {
   const previews = new Map(),
     jobs = new Map();
   function authorized(event) {
     if (event.sender !== getWindow()?.webContents) throw Error('Неизвестное окно');
   }
-  async function plan(tracks) {
-    const saved = getFavorites(),
-      favoriteIds = new Set(await readFavoriteIds()),
-      known = new Set([...saved.values()].map((t) => String(t.scId || t.id.replace(/^sc-/, ''))));
-    for (const t of getLibrary().tracks || [])
-      if (favoriteIds.has(t.id) && (t.scId || t.soundcloudId))
-        known.add(String(t.scId || t.soundcloudId));
-    let already = 0,
+  function plan(tracks) {
+    const known = new Set();
+    let duplicates = 0,
       excluded = 0;
     const add = [];
     for (const t of tracks) {
-      if (known.has(String(t.scId))) {
-        already++;
+      const key = String(t.scId);
+      if (known.has(key)) {
+        duplicates++;
         continue;
       }
+      known.add(key);
       if (isExcluded(t)) {
         excluded++;
         continue;
       }
-      known.add(String(t.scId));
       add.push(t);
     }
-    return { add, already, excluded };
+    return { add, duplicates, excluded };
   }
   ipcMain.handle('sc-import-preview', async (event, url) => {
     authorized(event);
@@ -66,7 +51,7 @@ module.exports = function ({
         profile: result.profile,
         stats: result.stats,
         found: result.tracks.length,
-        already: counts.already,
+        duplicates: counts.duplicates,
         excluded: counts.excluded,
         toAdd: counts.add.length,
         sample: counts.add.slice(0, 8).map((t) => ({ title: t.title, artist: t.artist })),
@@ -81,33 +66,23 @@ module.exports = function ({
     if (job) job.cancelled = true;
     return { cancelled: !!job };
   });
-  ipcMain.handle('sc-import-commit', async (event, token) => {
+  ipcMain.handle('sc-import-commit', async (event, token, name) => {
     authorized(event);
     const preview = previews.get(token);
     if (!preview || preview.until < Date.now())
       throw Error('Предпросмотр устарел. Загрузи список ещё раз.');
-    const saved = getFavorites(),
-      counts = await plan(preview.tracks),
-      added = [];
-    for (const t of register(counts.add)) {
-      if (saved.has(t.id)) continue;
-      const clean = { ...t, lyrics: '', alignment: undefined, downloadUrl: undefined };
-      saved.set(t.id, clean);
-      onAdd(t.id);
-      added.push(clean);
-    }
+    if (preview.committing) throw Error('Этот плейлист уже сохраняется.');
+    preview.committing = true;
     try {
-      await persist();
-    } catch (error) {
-      for (const t of added) if (saved.get(t.id) === t) saved.delete(t.id);
-      throw error;
+      const counts = plan(preview.tracks);
+      if (!counts.add.length) throw Error('Нет доступных треков для импорта.');
+      const title =
+        name === undefined ? ('SoundCloud · ' + preview.profile.name).slice(0, 100) : name;
+      const playlist = await createPlaylist(title, counts.add, preview.profile.url || '');
+      previews.delete(token);
+      return { ...playlist, excluded: counts.excluded, duplicates: counts.duplicates };
+    } finally {
+      preview.committing = false;
     }
-    previews.delete(token);
-    return {
-      added: added.length,
-      already: counts.already,
-      excluded: counts.excluded,
-      tracks: [...saved.values()],
-    };
   });
 };
