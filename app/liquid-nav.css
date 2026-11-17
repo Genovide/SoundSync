@@ -1,0 +1,49 @@
+/* Жидкая подсветка активного пункта меню (liquid-nav.js). */
+.liquid-nav-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+body > .sidebar.liquid-nav-on {
+  position: relative;
+}
+/* Пункты меню — над каплей. */
+body > .sidebar.liquid-nav-on > :is(nav, .sidebar-bottom, .sidebar-playlists) {
+  position: relative;
+  z-index: 1;
+}
+.liquid-nav {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  filter: url(#liquid-nav-goo);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.liquid-nav.shown {
+  opacity: 1;
+}
+.liquid-nav > i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 10px;
+  background: var(--ui-accent, #ffd629);
+  will-change: transform, width, height;
+}
+
+/* Фон активного пункта рисует капля; сам пункт прозрачный. Тёмный текст — только когда
+   капля уже под ним, иначе на миг получился бы тёмный текст на тёмном фоне. */
+body > .sidebar.liquid-nav-on .nav.active {
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: color 160ms ease;
+}
+body > .sidebar.liquid-nav-on .nav.active:not(.liquid-here) {
+  color: var(--ui-muted, #99a19e);
+}
+body > .sidebar.liquid-nav-on .nav.active.liquid-here {
+  color: var(--ui-accent-ink, #1b1a0a);
+}
