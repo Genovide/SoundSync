@@ -44,6 +44,9 @@
     if (!frame) frame = requestAnimationFrame(loop);
   };
 
+  // Пружины и общий цикл кадров — и для liquid-more.js.
+  window.SoundSyncLiquid = { spring, advance, resting, snap, animate, clamp };
+
   // ——— 1. Вкладки ———
   const NS = 'http://www.w3.org/2000/svg',
     defs = document.createElementNS(NS, 'svg');
@@ -107,7 +110,7 @@
       const here = target && goal && Math.abs(H.p[0] - goal[0]) < goal[2] * 0.4;
       for (const b of host.querySelectorAll('.liquid-here'))
         if (b !== target || !here) b.classList.remove('liquid-here');
-      if (here) target.classList.add('liquid-here');
+      if (here) target.classList.toggle('liquid-here', true);
     }
     const mover = (dt) => {
       advance(H, goal, dt);
