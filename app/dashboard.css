@@ -1139,11 +1139,28 @@ body .hero.start-panel h1 {
   }
 }
 
-.hero.start-panel { container-type: inline-size; }
+.hero.start-panel {
+  container-type: inline-size;
+}
 @container (max-width: 650px) {
- .start-panel-actions { grid-template-columns: 1fr; gap: 8px; }
- .start-choice { padding: 12px; }
- .start-choice-copy { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
- .start-choice-copy strong { white-space: nowrap; }
- .start-choice-copy small { text-align: right; max-width: 190px; }
+  .start-panel-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .start-choice {
+    padding: 12px;
+  }
+  .start-choice-copy {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .start-choice-copy strong {
+    white-space: nowrap;
+  }
+  .start-choice-copy small {
+    text-align: right;
+    max-width: 190px;
+  }
 }
