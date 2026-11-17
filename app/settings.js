@@ -301,6 +301,18 @@
 
   // ——— Визуализация ———
   const visual = section('Визуализация');
+  // Обложка на экране трека — квадратом или крутящейся пластинкой (то же, что клавиша V).
+  const TM = window.SoundSyncTrackModes;
+  if (TM) {
+    const vinylToggle = toggle(TM.state().vinyl, (on) => TM.setVinyl(on));
+    TM.onChange((state) => (vinylToggle.input.checked = state.vinyl));
+    row(
+      visual,
+      'Обложка — пластинка',
+      vinylToggle.wrap,
+      'Круглый виниловый диск, крутится во время музыки'
+    );
+  }
   const sceneSelect = el('select', 'settings-select');
   const modeSelect = document.querySelector('select.visual-mode');
   for (const option of modeSelect?.options || [])

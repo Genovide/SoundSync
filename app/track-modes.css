@@ -1,0 +1,233 @@
+/* Режимы экрана трека: «Пластинка» и «Без лишнего» (track-modes.js). */
+
+/* ——— Кнопка на обложке ——— */
+#immersive .immersive-art {
+  position: relative;
+}
+#immersive .vinyl-toggle {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid #ffffff2e;
+  background: rgba(20, 20, 24, 0.62);
+  backdrop-filter: blur(10px);
+  color: #f2f2f4;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  pointer-events: auto;
+}
+#immersive .immersive-art:is(:hover, :focus-within) .vinyl-toggle {
+  opacity: 1;
+  transform: none;
+}
+
+/* ——— Пластинка ——— */
+#immersive.vinyl .immersive-art {
+  border-radius: 50%;
+  overflow: visible;
+  box-shadow: none;
+  background: none;
+}
+/* Сам диск: обложка в круге. Крутится только он, блик сверху стоит на месте. */
+#immersive.vinyl .immersive-art > :not(.vinyl-toggle) {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 2px #0d0d0f,
+    0 0 0 3px #ffffff14,
+    0 22px 50px #000a;
+  /* Угол задаёт track-modes.js: диск плавно разгоняется и плавно останавливается. */
+  transform: rotate(var(--vinyl-angle, 0deg));
+  transform-origin: 50% 50%;
+}
+#immersive.vinyl .immersive-art > :not(.vinyl-toggle) img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+/* Бороздки, центр с отверстием и блик — поверх диска, не вращаются (они симметричны). */
+#immersive.vinyl .immersive-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    /* центр: чёрная «наклейка» с тонким кольцом и отверстием */
+    radial-gradient(
+      circle,
+      #dcdcdc 0 1.6%,
+      #0b0b0c 1.9% 15.5%,
+      #ffffff1c 15.8%,
+      #0b0b0c 16.4% 17.6%,
+      transparent 18%
+    ),
+    /* бороздки */
+    repeating-radial-gradient(circle, #00000000 0 2px, #0000002e 2px 3px, #ffffff0a 3px 4px),
+    /* затемнение к краю, как у винила */ radial-gradient(circle, transparent 55%, #00000052 100%);
+}
+/* Неподвижный блик: свет падает сверху-слева, при вращении остаётся на месте. */
+#immersive.vinyl .immersive-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 210deg,
+    transparent 0deg,
+    #ffffff26 28deg,
+    transparent 62deg,
+    transparent 180deg,
+    #ffffff1a 208deg,
+    transparent 240deg
+  );
+  mix-blend-mode: screen;
+}
+
+/* ——— Кнопка «Без лишнего» в верхней панели ——— */
+#immersive .clean-view-toggle {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid #ffffff1c;
+  background: #ffffff0a;
+  color: #f5f3eb;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+#immersive .clean-view-toggle:hover {
+  background: #ffffff14;
+}
+#immersive .clean-view-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ——— Режим «Без лишнего» ——— */
+#immersive .clean-view-exit {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  z-index: 40;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid #ffffff26;
+  background: rgba(20, 20, 24, 0.6);
+  backdrop-filter: blur(12px);
+  color: #f2f2f4;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    visibility 0s linear 220ms;
+}
+#immersive.clean-view.clean-awake .clean-view-exit {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    visibility 0s;
+}
+/* Прячем: верхнюю панель, подпись «Сейчас играет», альбом, кнопки текста под обложкой,
+   панель плеера внизу и питомца. Остаются визуализация, обложка с названием и текст. */
+#immersive.clean-view > .immersive-top,
+#immersive.clean-view .immersive-badge,
+#immersive.clean-view .immersive-album,
+#immersive.clean-view .listening-actions,
+#immersive.clean-view .vinyl-toggle,
+#immersive.clean-view .visual-settings,
+#immersive.clean-view .current-track-menu,
+body.clean-track-view > .titlebar > :not(.window-actions),
+body.clean-track-view > footer.player,
+body.clean-track-view > .player-pet {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition:
+    opacity 260ms ease,
+    visibility 0s linear 260ms !important;
+}
+/* Без панели плеера экран трека занимает окно до самого низа. */
+body.clean-track-view {
+  --dock-space: 0px;
+}
+/* Курсор тоже не мешает, пока мышь не двигается. */
+#immersive.clean-view:not(.clean-awake) {
+  cursor: none;
+}
+
+/* ——— Переход в «Без лишнего» и обратно ———
+   Лишнее плавно гаснет, а обложка (пластинка) плавно увеличивается и чуть уходит вправо.
+   При возврате всё так же плавно проявляется обратно. */
+#immersive .immersive-art {
+  transition:
+    opacity 420ms ease,
+    filter 420ms ease,
+    width 900ms cubic-bezier(0.22, 0.8, 0.2, 1),
+    transform 900ms cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+/* Пластинка только плавно увеличивается, на месте. */
+#immersive.clean-view .immersive-art {
+  width: min(46vh, 520px);
+}
+/* Скрываемые элементы проявляются обратно так же плавно, как гаснут. */
+#immersive > .immersive-top,
+#immersive :is(.immersive-badge, .immersive-album, .listening-actions, .current-track-menu),
+body > .player-pet,
+body > .titlebar > :not(.window-actions) {
+  transition:
+    opacity 320ms ease,
+    visibility 0s linear 0s;
+}
+body > footer.player {
+  transition:
+    opacity 320ms ease,
+    visibility 0s linear 0s;
+}
+#immersive.clean-view > .immersive-top,
+#immersive.clean-view
+  :is(.immersive-badge, .immersive-album, .listening-actions, .current-track-menu),
+body.clean-track-view > .player-pet,
+body.clean-track-view > .titlebar > :not(.window-actions),
+body.clean-track-view > footer.player {
+  transition:
+    opacity 380ms ease,
+    visibility 0s linear 380ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #immersive .immersive-art,
+  #immersive :is(.immersive-title, .immersive-artist) {
+    transition-duration: 1ms;
+  }
+}
+
+/* Увеличенная пластинка не должна обрезаться краем колонки с обложкой. */
+#immersive.clean-view .immersive-info {
+  overflow: visible;
+}
