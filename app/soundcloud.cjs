@@ -821,7 +821,7 @@ module.exports = function setupSoundCloud({
         if (range) headers.Range = range;
         const url = cdnUrl(value.url);
         let upstream = await fetchImpl(url, { headers, signal: request.signal });
-        if ([401, 403].includes(upstream.status)) {
+        if ([401, 403, 404, 410].includes(upstream.status)) {
           await upstream.body?.cancel();
           resolved.delete(id);
           fast.clear();
@@ -849,7 +849,7 @@ module.exports = function setupSoundCloud({
           } catch (e) {
             if (request.signal?.aborted) return new Response(null, { status: 499 });
             // Ссылка устарела — берём новую и пробуем ещё раз; иначе остаётся прежний путь.
-            if (attempt || ![401, 403].includes(e.status)) break;
+            if (attempt || ![401, 403, 404, 410].includes(e.status)) break;
             resolved.delete(id);
             fast.clear();
             value = await resolve(id);
@@ -1098,7 +1098,7 @@ module.exports = function setupSoundCloud({
   });
   ipcMain.handle('sc-metadata', (_, id, force) => improveMetadata(id, force === true));
   ipcMain.handle('sc-prefetch', async (_, id) => {
-    if (typeof id !== 'string' || !tracks.has(id)) return false;
+    if (typeof id !== 'string' || !remoteTrack(id)) return false;
     await initial;
     const value = await resolve(id);
     // Заранее качаем плейлист и начало трека, чтобы он заиграл сразу после нажатия.

@@ -128,9 +128,9 @@ module.exports = function ({ dir, fetchImpl = fetch, mapTrack }) {
       }
     );
   }
-  async function details(t) {
+  async function details(t, force = false) {
     let info = raw.get(String(t.scId));
-    if (!info?.media?.transcodings?.length)
+    if (force || !info?.media?.transcodings?.length)
       info = await api('tracks/' + encodeURIComponent(t.scId));
     remember(info);
     return info;
@@ -148,34 +148,39 @@ module.exports = function ({ dir, fetchImpl = fetch, mapTrack }) {
   }
   async function resolve(t) {
     return memo('stream:' + t.scId, 180000, async () => {
-      const info = await details(t);
-      const unavailable = require('./soundcloud-availability.cjs').unavailableError(info);
-      if (unavailable) throw unavailable;
-      if (info.policy === 'BLOCK' || info.policy === 'SNIP') throw Error('Track unavailable');
-      const formats = (info.media?.transcodings || []).filter(
-        (f) => !f.snipped && !/encrypted|ctr-|cbc-/i.test(f.format?.protocol || '')
-      );
-      formats.sort((a, b) => score(b) - score(a));
-      let last;
-      for (const f of formats) {
-        try {
-          const d = await api(
-            f.url,
-            info.track_authorization ? { track_authorization: info.track_authorization } : {}
-          );
-          if (d.url)
-            return {
-              url: d.url,
-              mime: f.format?.mime_type || '',
-              protocol: f.format?.protocol,
-              mp3: /mpeg|mp3/i.test(f.format?.mime_type || f.preset || ''),
-              track: mapTrack(info),
-            };
-        } catch (e) {
-          last = e;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const info = await details(t, attempt > 0);
+        const unavailable = require('./soundcloud-availability.cjs').unavailableError(info);
+        if (unavailable) throw unavailable;
+        if (info.policy === 'BLOCK' || info.policy === 'SNIP') throw Error('Track unavailable');
+        const formats = (info.media?.transcodings || []).filter(
+          (f) => !f.snipped && !/encrypted|ctr-|cbc-/i.test(f.format?.protocol || '')
+        );
+        formats.sort((a, b) => score(b) - score(a));
+        let last;
+        for (const f of formats) {
+          try {
+            const d = await api(
+              f.url,
+              info.track_authorization ? { track_authorization: info.track_authorization } : {}
+            );
+            if (d.url)
+              return {
+                url: d.url,
+                mime: f.format?.mime_type || '',
+                protocol: f.format?.protocol,
+                mp3: /mpeg|mp3/i.test(f.format?.mime_type || f.preset || ''),
+                track: mapTrack(info),
+              };
+          } catch (e) {
+            last = e;
+          }
         }
+        // Search results may sit in memory for a long import. Their authorization
+        // and transcoding endpoints can expire before the user first presses play.
+        if (!attempt && (!formats.length || [401, 403, 404, 410].includes(last?.status))) continue;
+        throw last || Error('No public stream');
       }
-      throw last || Error('No public stream');
     });
   }
   function score(f) {
@@ -205,6 +210,7 @@ module.exports = function ({ dir, fetchImpl = fetch, mapTrack }) {
     raw: (id) => raw.get(String(id)),
     clear: () => {
       cache.clear();
+      raw.clear();
     },
   };
 };
