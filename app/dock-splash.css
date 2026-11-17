@@ -1,0 +1,133 @@
+/* Всплески на панели плеера (dock-splash.js). Всё мягкое и короткое: 0,5–0,8 с. */
+
+/* Кольцо, как от капли на воде: расходится из центра кнопки или обложки и тает. */
+body > footer.player .dock-ring {
+  position: absolute;
+  z-index: 0;
+  width: var(--size, 40px);
+  height: var(--size, 40px);
+  margin: calc(var(--size, 40px) / -2) 0 0 calc(var(--size, 40px) / -2);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: dock-ring 680ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+body > footer.player .dock-ring-play {
+  border: 2px solid color-mix(in srgb, var(--accent, #ffd629) 75%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent, #ffd629) 35%, transparent);
+}
+body > footer.player .dock-ring-pause {
+  border: 2px solid #ffffff73;
+  box-shadow: 0 0 14px #ffffff26;
+}
+body > footer.player .dock-ring-cover {
+  border: 1.5px solid #ffffff59;
+  border-radius: 14px;
+  animation-duration: 620ms;
+}
+@keyframes dock-ring {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Кнопка паузы мягко пружинит. */
+#play.dock-press {
+  animation: dock-press 520ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes dock-press {
+  0% {
+    transform: scale(0.86);
+  }
+  55% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Стекло панели чуть вздрагивает, как поверхность воды. */
+body > footer.player.dock-bump::before {
+  animation: dock-bump 560ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+@keyframes dock-bump {
+  0% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.004, 0.972);
+  }
+  65% {
+    transform: scale(0.999, 1.008);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* Смена трека: светлая волна пробегает по стеклу в сторону переключения. */
+body > footer.player.dock-wave::after {
+  /* ::after панели — слой всплеска при появлении; в покое он прозрачен, тут — волна. */
+  inset: 0;
+  border-radius: 22px;
+  opacity: 1;
+  z-index: -1;
+  background: linear-gradient(
+      100deg,
+      transparent 0%,
+      #ffffff00 30%,
+      #ffffff24 48%,
+      color-mix(in srgb, var(--accent, #ffd629) 18%, transparent) 52%,
+      #ffffff00 70%,
+      transparent 100%
+    )
+    no-repeat;
+  background-size: 45% 100%;
+  animation: dock-wave 780ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  overflow: hidden;
+}
+@keyframes dock-wave {
+  0% {
+    background-position: var(--wave-from, -60%) 0;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    background-position: var(--wave-to, 160%) 0;
+    opacity: 0;
+  }
+}
+
+/* Название и исполнитель нового трека въезжают с той же стороны. */
+body > footer.player .dock-text-in {
+  animation: dock-text-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes dock-text-in {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--text-from, 14px));
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body > footer.player .dock-ring,
+  #play.dock-press,
+  body > footer.player.dock-bump::before,
+  body > footer.player.dock-wave::after,
+  body > footer.player .dock-text-in {
+    animation: none;
+  }
+}
