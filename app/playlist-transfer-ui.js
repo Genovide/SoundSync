@@ -77,6 +77,26 @@
     fileName = '',
     sourceKind = 'yandex',
     loadedYandexUrl = '';
+  let task = 'idle',
+    completed = 0,
+    taskTotal = 0;
+  const background = node('button', 'transfer-background');
+  background.type = 'button';
+  background.hidden = true;
+  document.querySelector('.playlists-nav').after(background);
+  function showTask() {
+    background.hidden = task === 'idle';
+    background.textContent =
+      task === 'reading'
+        ? 'Читаем коллекцию…'
+        : task === 'searching'
+          ? `Поиск треков: ${completed} из ${taskTotal}`
+          : task === 'review'
+            ? 'Перенос готов · проверить'
+            : 'Коллекция загружена · открыть';
+    background.title = 'Открыть перенос. Поиск продолжается, пока окно скрыто.';
+  }
+  const isWorking = () => task === 'reading' || task === 'searching';
 
   function step(name) {
     for (const s of $$d('.transfer-step')) s.hidden = s.dataset.step !== name;
@@ -113,6 +133,8 @@
     const url = yandexUrl.value.trim();
     if (!url) return fail('Вставь ссылку из меню «Поделиться» в Яндекс Музыке.');
     const token = ++run;
+    task = 'reading';
+    showTask();
     step('search');
     $d('.transfer-progress-text').textContent = 'Читаем коллекцию Яндекс Музыки…';
     $d('.transfer-bar i').style.width = '15%';
@@ -121,6 +143,8 @@
       if (token !== run) return;
       parsed = result;
       loadedYandexUrl = url;
+      task = 'ready';
+      showTask();
       if (!nameInput.value.trim()) nameInput.value = result.name;
       step('source');
       const status = $d('.transfer-yandex-status');
@@ -133,6 +157,8 @@
       syncSource();
     } catch (error) {
       if (token !== run) return;
+      task = 'idle';
+      showTask();
       step('source');
       fail(cleanError(error));
       syncSource();
@@ -174,6 +200,8 @@
   for (const tab of $$d('[data-how]'))
     tab.onclick = () => {
       run++;
+      task = 'idle';
+      showTask();
       sourceKind = tab.dataset.how;
       loadedYandexUrl = '';
       parsed = { name: '', items: [] };
@@ -231,6 +259,7 @@
     return { item, options, choice: 0, verdict, include: verdict === 'sure' };
   }
   async function search() {
+    if (isWorking()) return;
     if (sourceKind === 'yandex' && (!loadedYandexUrl || loadedYandexUrl !== yandexUrl.value.trim()))
       return loadYandex();
     reparse();
@@ -242,27 +271,52 @@
       bar = $d('.transfer-bar i'),
       label = $d('.transfer-progress-text');
     results = new Array(items.length);
+    const runResults = results;
+    task = 'searching';
+    completed = 0;
+    taskTotal = items.length;
+    showTask();
     step('search');
     let done = 0,
       next = 0;
     const paint = () => {
       bar.style.width = (done / items.length) * 100 + '%';
       label.textContent = `Ищем треки: ${done} из ${items.length}`;
+      completed = done;
+      showTask();
     };
     paint();
     // Три поиска одновременно: быстро, но без лавины запросов к SoundCloud.
     const worker = async () => {
       while (token === run && next < items.length) {
         const at = next++;
-        results[at] = await match(index, items[at]);
+        const result = await match(index, items[at]);
+        if (token !== run) return;
+        runResults[at] = result;
         done++;
         paint();
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    try {
+      await Promise.all([worker(), worker(), worker()]);
+    } catch (error) {
+      if (token !== run) return;
+      task = 'idle';
+      showTask();
+      step('source');
+      fail(cleanError(error));
+      if (!dialog.open) toast('Подбор прерван: ' + cleanError(error));
+      return;
+    }
     if (token !== run) return;
     step('review');
+    task = 'review';
+    showTask();
     drawReview();
+    if (!dialog.open)
+      toast(
+        'Подбор треков завершён. Открой «Перенос готов», чтобы проверить и сохранить плейлист.'
+      );
   }
 
   // ——— Проверка ———
@@ -271,13 +325,22 @@
       ? Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0')
       : '';
   const LABEL = { sure: 'Найдено', maybe: 'Проверь', missing: 'Не найдено' };
+  const selectedTracks = () =>
+    results.filter((r) => r?.include && r.options[r.choice]).map((r) => r.options[r.choice].track);
+  const identity = (track) =>
+    track.scId || track.soundcloudId ? 'sc:' + (track.scId || track.soundcloudId) : track.id;
   function drawSummary() {
     const count = (v) => results.filter((r) => r.verdict === v).length,
-      chosen = results.filter((r) => r.include && r.options[r.choice]).length;
+      selected = selectedTracks(),
+      chosen = new Set(selected.map(identity)).size;
     $d('.transfer-summary').replaceChildren(
       node('span', 'transfer-chip sure', `✓ Найдено: ${count('sure')}`),
       node('span', 'transfer-chip maybe', `? Проверь: ${count('maybe')}`),
-      node('span', 'transfer-chip missing', `✕ Не найдено: ${count('missing')}`)
+      node('span', 'transfer-chip missing', `✕ Не найдено: ${count('missing')}`),
+      node('span', 'transfer-chip', `К сохранению: ${chosen}`),
+      ...(selected.length > chosen
+        ? [node('span', 'transfer-chip', `Повторов: ${selected.length - chosen}`)]
+        : [])
     );
     const create = $d('[data-create]');
     create.textContent = chosen ? `Создать плейлист · ${chosen}` : 'Создать плейлист';
@@ -375,16 +438,20 @@
     return el;
   }
   async function createPlaylist() {
-    const ids = results
-      .filter((r) => r.include && r.options[r.choice])
-      .map((r) => r.options[r.choice].track.id);
+    // Pass complete selected records: the search cache may already have evicted them.
+    const ids = selectedTracks();
     const name = nameInput.value.trim() || parsed.name || 'Перенесённый плейлист';
     const button = $d('[data-create]');
     button.disabled = true;
     try {
       const p = await window.lumen.playlistImportList(name, ids);
+      task = 'idle';
+      showTask();
       dialog.close();
-      toast(`Плейлист «${p.name}» создан: ${p.added} треков`);
+      toast(
+        `Плейлист «${p.name}» создан: ${p.added} треков` +
+          (p.duplicates ? ` · повторов исключено: ${p.duplicates}` : '')
+      );
       window.openPlaylistById?.(p.id);
     } catch (e) {
       fail(cleanError(e));
@@ -397,21 +464,34 @@
   $d('[data-create]').onclick = createPlaylist;
   $d('[data-cancel]').onclick = () => {
     run++;
+    task = 'idle';
+    showTask();
     step('source');
   };
-  $d('[data-back]').onclick = () => step('source');
+  $d('[data-back]').onclick = () => {
+    task = sourceKind === 'yandex' && loadedYandexUrl ? 'ready' : 'idle';
+    showTask();
+    step('source');
+  };
   $d('[data-close]').onclick = () => {
-    run++;
     dialog.close();
   };
-  dialog.addEventListener('cancel', () => run++);
+  $d('[data-close]').title = 'Скрыть окно. Поиск продолжится в фоне.';
+  $d('[data-close]').setAttribute('aria-label', 'Скрыть окно переноса');
   window.openPlaylistTransfer = () => {
-    step('source');
-    reparse();
+    if (isWorking()) step('search');
+    else if (task === 'review') step('review');
+    else {
+      step('source');
+      reparse();
+    }
     dialog.showModal();
     syncSource();
-    (sourceKind === 'yandex' ? yandexUrl : text).focus();
+    if (isWorking()) $d('[data-cancel]').focus();
+    else if (task === 'review') $d('[data-create]').focus();
+    else (sourceKind === 'yandex' ? yandexUrl : text).focus();
   };
+  background.onclick = () => window.openPlaylistTransfer();
   // Для проверок.
   window.runPlaylistTransfer = async (listText, name) => {
     window.openPlaylistTransfer();

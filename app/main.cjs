@@ -542,7 +542,7 @@ app
       getWindow: () => win,
       getLibrary: () => library,
       getRemoteTrack: (id) => soundcloud.getTrack(id),
-      registerRemote: (items) => soundcloud.register(items),
+      registerRemote: (items) => soundcloud.register(items, { retain: true }),
       readRemotePlaylist: (url) => soundcloud.playlistPreview(url),
     });
     require('./feedback.cjs')({

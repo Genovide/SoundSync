@@ -43,6 +43,7 @@
     refresh(id);
   }
   nav.onclick = () => {
+    window.dashboardNavigation?.restore(false);
     view = 'playlists';
     selectedArtist = null;
     albumFilter = null;
@@ -66,6 +67,10 @@
     if (view !== 'playlists') return;
     const main = document.querySelector('main'),
       top = main.scrollTop;
+    // Keep the shared search input connected while this section is rebuilt.
+    // Search-layout places it back into the new heading after the render.
+    const sharedSearch = section.querySelector('.section-search');
+    if (sharedSearch) document.querySelector('.topline').append(sharedSearch);
     section.replaceChildren();
     const heading = node('div', 'playlist-heading'),
       title = node('div');

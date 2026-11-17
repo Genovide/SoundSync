@@ -1,4 +1,22 @@
 /* Окно «Перенести плейлист». */
+.transfer-background {
+  display: block;
+  width: 100%;
+  margin: 6px 0 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--ui-border, #ffffff20);
+  border-radius: 12px;
+  background: var(--surface, #ffffff08);
+  color: var(--ui-accent, #ddd);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.transfer-background[hidden] {
+  display: none !important;
+}
 .transfer-yandex-status {
   margin: 12px 0 0;
   padding: 10px 14px;

@@ -93,6 +93,8 @@ module.exports = function setupSoundCloud({
   let favoriteWrites = Promise.resolve();
   const historyTracks = new Map();
   let historyWrites = Promise.resolve();
+  const retainedTracks = new Map();
+  const remoteTrack = (id) => tracks.get(id) || retainedTracks.get(id);
   const tracks = new Map(),
     coverCache = new Map(),
     resolved = new Map(),
@@ -290,7 +292,7 @@ module.exports = function setupSoundCloud({
       )
     );
   }
-  function register(items) {
+  function register(items, { retain = false } = {}) {
     const result = [];
     for (let t of items) {
       if (t) t = identityStore.apply(require('./text-repair.js').repairTrackMetadata(t));
@@ -303,8 +305,10 @@ module.exports = function setupSoundCloud({
         continue;
       }
       tracks.set(t.id, t);
+      if (retain) retainedTracks.set(t.id, t);
       result.push(t);
     }
+    while (retainedTracks.size > 20000) retainedTracks.delete(retainedTracks.keys().next().value);
     while (tracks.size > 1000) tracks.delete(tracks.keys().next().value);
     return result.map((t) => ({ ...t, downloadUrl: undefined }));
   }
@@ -374,7 +378,7 @@ module.exports = function setupSoundCloud({
 
   async function related(id, query) {
     await initial;
-    const t = tracks.get(id);
+    const t = remoteTrack(id);
     if (t) {
       try {
         if (status().officialConfigured) {
@@ -481,7 +485,7 @@ module.exports = function setupSoundCloud({
     const sources = [];
     const original = station.anchors[station.cursor++ % station.anchors.length];
     sources.push(original);
-    const current = tracks.get(currentId);
+    const current = remoteTrack(currentId);
     if (current && artistKey(current.artist) !== artistKey(original.artist)) sources.push(current);
     else if (station.anchors.length > 1)
       sources.push(station.anchors[station.cursor++ % station.anchors.length]);
@@ -644,7 +648,7 @@ module.exports = function setupSoundCloud({
     return (await worker({ action: 'runtime' })).ffmpeg;
   }
   async function resolveStream(id) {
-    const t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+    const t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
     if (!t) throw Error('Трек устарел — выполни поиск ещё раз');
     const unavailable = require('./soundcloud-availability.cjs').unavailableError(t);
     if (unavailable) throw unavailable;
@@ -684,7 +688,7 @@ module.exports = function setupSoundCloud({
   }
   async function download(id) {
     await initial;
-    const t = tracks.get(id);
+    const t = remoteTrack(id);
     if (!t) throw Error('Сначала найди трек в SoundCloud');
     if (busyDownloads.has(id)) throw Error('Этот трек уже скачивается');
     const existing = getLibrary().tracks.find((x) => x.soundcloudId === t.scId);
@@ -768,7 +772,7 @@ module.exports = function setupSoundCloud({
   async function handleProtocol(request) {
     const u = new URL(request.url),
       id = u.pathname.slice(1),
-      t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+      t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
     if (!t) return new Response('Track not found', { status: 404 });
     if (u.hostname === 'sc-cover') {
       try {
@@ -1000,7 +1004,7 @@ module.exports = function setupSoundCloud({
       throw Error('Недопустимый трек');
     favoriteRevisions.set(id, (favoriteRevisions.get(id) || 0) + 1);
     if (liked) {
-      const t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+      const t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
       if (!t) throw Error('Сначала открой трек в SoundCloud');
       if (isExcluded(t)) throw Error('Сначала убери трек из списка «Не нравится»');
       const clean = { ...t, lyrics: '', alignment: undefined, downloadUrl: undefined };
@@ -1038,7 +1042,7 @@ module.exports = function setupSoundCloud({
     if (typeof id !== 'string' || !/^sc-[a-zA-Z0-9:-]+$/.test(id) || typeof excluded !== 'boolean')
       throw Error('Недопустимый трек');
     if (excluded) {
-      const t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+      const t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
       if (!t) throw Error('Сначала открой трек');
       excludedTracks.set(id, {
         id: t.id,
@@ -1068,7 +1072,7 @@ module.exports = function setupSoundCloud({
   });
   async function improveMetadata(id, force = false) {
     await initial;
-    const t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+    const t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
     if (!t) throw Error('Сначала найди или открой этот трек');
     const improved = t.metadataManual ? t : await metadataResolver.resolve(t, { force });
     Object.assign(t, improved);
@@ -1082,7 +1086,7 @@ module.exports = function setupSoundCloud({
   ipcMain.handle('sc-metadata-set', async (event, id, patch) => {
     if (event.sender !== getWindow()?.webContents) throw Error('Unknown window');
     await initial;
-    const t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+    const t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
     if (!t) throw Error('Сначала открой трек SoundCloud');
     await identityStore.set(t, patch);
     register([t]);
@@ -1147,7 +1151,7 @@ module.exports = function setupSoundCloud({
   ipcMain.handle('sc-history-record', async (event, id) => {
     if (event.sender !== getWindow()?.webContents) throw Error('Unknown window');
     await initial;
-    const t = tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id);
+    const t = remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id);
     if (!t || isExcluded(t)) return false;
     const saved = {};
     for (const key of [
@@ -1212,7 +1216,7 @@ module.exports = function setupSoundCloud({
       return result;
     },
     flush: () => Promise.allSettled([historyWrites, favoriteWrites, exclusionWrites]),
-    getTrack: (id) => tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id),
+    getTrack: (id) => remoteTrack(id) || savedFavorites.get(id) || historyTracks.get(id),
     handleProtocol,
     // Для измерения громкости: адрес потока и ffmpeg (без воспроизведения).
     loudnessSource: async (id) => {

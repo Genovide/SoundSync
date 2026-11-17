@@ -27,6 +27,41 @@ function reference(t) {
   }
   return clean;
 }
+function importSnapshot(value) {
+  if (!value || typeof value !== 'object' || value.remote !== true) return null;
+  const scId = String(value.scId || '');
+  if (!/^\d{1,24}$/.test(scId) || value.id !== 'sc-' + scId)
+    throw Error('Некорректный идентификатор найденного трека.');
+  let url;
+  try {
+    url = new URL(value.pageUrl);
+  } catch {
+    throw Error('У найденного трека нет ссылки SoundCloud.');
+  }
+  if (
+    url.protocol !== 'https:' ||
+    !['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com'].includes(url.hostname) ||
+    url.username ||
+    url.password ||
+    url.port ||
+    !/^\/[^/]+\/[^/]+\/?$/.test(url.pathname)
+  )
+    throw Error('Некорректная ссылка найденного трека.');
+  if (value.playbackUnavailable || ['blocked', 'preview'].includes(value.access))
+    throw Error('Выбран недоступный трек. Проверь результаты переноса.');
+  if (typeof value.title !== 'string' || !value.title.trim() || value.title.length > 500)
+    throw Error('У найденного трека нет корректного названия.');
+  const clean = { id: value.id, scId, remote: true, pageUrl: url.href };
+  for (const key of FIELDS) {
+    if (['id', 'scId', 'remote', 'pageUrl'].includes(key)) continue;
+    if (key === 'duration') {
+      if (Number.isFinite(value.duration) && value.duration >= 0 && value.duration <= 86400)
+        clean.duration = value.duration;
+    } else if (typeof value[key] === 'string')
+      clean[key] = value[key].slice(0, key === 'description' ? 2000 : 1000);
+  }
+  return clean;
+}
 module.exports = function ({
   app,
   ipcMain,
@@ -77,11 +112,11 @@ module.exports = function ({
   }
   function resolve(ref) {
     const current = track(ref.id);
-    if (current) return { ...current };
     if (ref.remote) {
-      const restored = registerRemote([ref])[0];
+      const restored = registerRemote([current || ref])[0];
       if (restored) return restored;
     }
+    if (current) return { ...current };
     return {
       ...ref,
       missing: true,
@@ -309,16 +344,27 @@ module.exports = function ({
     return mutate(() => {
       const seen = new Set(),
         tracks = [];
-      for (const id of ids) {
-        if (typeof id !== 'string') continue;
-        const t = track(id);
+      for (const entry of ids) {
+        const id = typeof entry === 'string' ? entry : entry?.id;
+        if (typeof id !== 'string') throw Error('Некорректный трек в результатах переноса.');
+        const snapshot = typeof entry === 'object' ? importSnapshot(entry) : null;
+        const t = snapshot ? registerRemote([snapshot])[0] : track(id);
         const key = t && (t.scId || t.soundcloudId ? 'sc:' + (t.scId || t.soundcloudId) : t.id);
-        if (!t || seen.has(key)) continue;
+        if (!t)
+          throw Error(
+            'Один из выбранных треков потерян. Плейлист не сохранён частично — повтори подбор.'
+          );
+        if (seen.has(key)) continue;
         seen.add(key);
         tracks.push(reference(t));
       }
       if (!tracks.length) throw Error('Ни один трек не найден. Попробуй загрузить список снова.');
-      return { ...create(name, tracks), added: tracks.length, skipped: ids.length - tracks.length };
+      return {
+        ...create(name, tracks),
+        added: tracks.length,
+        duplicates: ids.length - tracks.length,
+        skipped: ids.length - tracks.length,
+      };
     });
   });
   return { flush: () => writes };
