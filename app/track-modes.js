@@ -30,8 +30,40 @@
   new MutationObserver(() => {
     if (!immersiveArt.contains(vinylButton)) immersiveArt.append(vinylButton);
   }).observe(immersiveArt, { childList: true });
-  const spin = () =>
-    immersive.classList.toggle('vinyl-spinning', vinyl && !audio.paused && !audio.ended);
+  // Вращение с инерцией, как у проигрывателя: при воспроизведении диск разгоняется до
+  // ~40°/с (оборот за 9 секунд), на паузе плавно замедляется до остановки.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  let angle = 0,
+    speed = 0,
+    last = 0,
+    frame = 0;
+  // Пока экран трека закрыт, диск не крутим — не тратим кадры впустую.
+  const target = () =>
+    vinyl && !audio.paused && !audio.ended && !immersive.classList.contains('hidden')
+      ? reduced.matches
+        ? 15
+        : 40
+      : 0;
+  function tick(now) {
+    const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+    last = now;
+    const goal = target();
+    // Разгон быстрее (≈0,6 с), остановка мягче (≈1,4 с).
+    const ease = 1 - Math.exp(-dt / (goal > speed ? 0.35 : 0.7));
+    speed += (goal - speed) * ease;
+    if (goal === 0 && speed < 0.4) speed = 0;
+    angle = (angle + speed * dt) % 360;
+    immersiveArt.style.setProperty('--vinyl-angle', angle.toFixed(2) + 'deg');
+    if (speed > 0 || goal > 0) frame = requestAnimationFrame(tick);
+    else {
+      frame = 0;
+      last = 0;
+    }
+  }
+  const spin = () => {
+    immersive.classList.toggle('vinyl-spinning', target() > 0);
+    if (!frame && (target() > 0 || speed > 0)) frame = requestAnimationFrame(tick);
+  };
   function setVinyl(on) {
     vinyl = !!on;
     write('cover-vinyl', vinyl);
@@ -47,6 +79,10 @@
     e.stopPropagation();
     setVinyl(!vinyl);
   };
+  new MutationObserver(() => spin()).observe(immersive, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
   for (const name of ['play', 'playing', 'pause', 'ended', 'emptied'])
     audio.addEventListener(name, spin);
 
