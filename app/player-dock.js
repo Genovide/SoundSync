@@ -20,7 +20,7 @@
       player.classList.remove('dock-enter');
       void player.offsetWidth;
       player.classList.add('dock-enter');
-      timer = setTimeout(() => player.classList.remove('dock-enter'), 1000);
+      timer = setTimeout(() => player.classList.remove('dock-enter'), 1200);
     } else {
       player.classList.remove('dock-enter');
       player.classList.add('dock-leave');
