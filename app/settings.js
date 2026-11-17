@@ -70,8 +70,12 @@
     const input = el('input', 'settings-range');
     input.type = 'range';
     Object.assign(input, { min, max, step, value });
-    const paint = () =>
-      input.style.setProperty('--fill', ((input.value - min) / (max - min)) * 100 + '%');
+    // --p (0…1) — положение ползунка: по нему заливка заканчивается ровно в центре кружка.
+    const paint = () => {
+      const p = (input.value - min) / (max - min);
+      input.style.setProperty('--fill', p * 100 + '%');
+      input.style.setProperty('--p', String(p));
+    };
     input.oninput = () => {
       paint();
       onInput(Number(input.value));
@@ -151,7 +155,11 @@
         input = slider(-12, 12, 1, EQ.get().gains[i], (v) => EQ.setGain(i, v));
       input.classList.add('eq-slider');
       input.setAttribute('aria-label', band.label + ' Гц');
-      col.append(value, input, el('span', 'eq-freq', band.label));
+      // Вертикальный ползунок — обычный горизонтальный, повёрнутый в своей ячейке: так кружок
+      // всегда точно на дорожке (у writing-mode: vertical он съезжает).
+      const slot = el('div', 'eq-slot');
+      slot.append(input);
+      col.append(value, slot, el('span', 'eq-freq', band.label));
       bands.append(col);
       return { input, value };
     });
@@ -218,6 +226,8 @@
         input.paint();
         const db = stateNow.gains[i];
         value.textContent = (db > 0 ? '+' : '') + db;
+        value.classList.toggle('boost', db > 0);
+        value.classList.toggle('cut', db < 0);
       });
       for (const chip of presets.children)
         chip.classList.toggle('active', chip.dataset.preset === stateNow.preset);
