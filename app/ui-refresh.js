@@ -627,6 +627,11 @@
     content.classList.remove('view-enter');
     void content.offsetWidth;
     content.classList.add('view-enter');
+    // Анимация — только при входе в раздел. Класс снимаем, когда строки появились: иначе
+    // любое обновление списка (пауза, следующий трек) заново «выезжало» бы все строки.
+    clearTimeout(enterTimer);
+    enterTimer = setTimeout(() => content.classList.remove('view-enter'), 900);
   };
+  let enterTimer = 0;
   lastView = viewKey();
 })();
