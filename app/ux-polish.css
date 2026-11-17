@@ -134,11 +134,11 @@ body > .sidebar > .sidebar-bottom {
   margin-top: auto;
   padding-top: 10px;
 }
-/* На невысоком окне карточку папки прячем: папку можно выбрать на главной и в «Настройках». */
-@media (max-height: 820px) {
-  body > .sidebar .folder-card {
-    display: none;
-  }
+/* Карточка «Музыка рядом» в меню больше не показывается: папка выбирается в «Настройки» →
+   «Медиатека» и на главной, пока медиатека пустая. Кнопки остаются в разметке — их вызывают
+   «Настройки». */
+body > .sidebar .folder-card {
+  display: none !important;
 }
 /* Если пункты меню не помещаются, внизу затухание: видно, что список прокручивается. */
 body > .sidebar > nav.nav-scrollable:not(.nav-at-end) {
