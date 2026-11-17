@@ -1,0 +1,270 @@
+/* Нижний плеер — парящая стеклянная панель.
+   Не прикреплена к краю окна: висит с отступами, со скруглением и лёгким «жидким стеклом»
+   (размытие и насыщенность того, что под ней, блик сверху, мягкая тень). Пока ничего не
+   играет, панели нет; при первом треке она «падает каплей» из центра (player-dock.js). */
+:root {
+  --dock-height: 92px;
+  --dock-inset: 18px;
+  --dock-gap: 14px;
+  --dock-space: calc(var(--dock-height) + var(--dock-gap) * 2);
+}
+body.dock-idle {
+  --dock-space: 0px;
+}
+
+/* Нижняя строка сетки окна больше не нужна: панель парит поверх содержимого. */
+body {
+  grid-template-rows: 54px minmax(0, 1fr) 0 !important;
+}
+/* :not(#…) поднимает приоритет выше старых правил вида .flat-theme .player { background: #111 }:
+   иначе под стеклом рисуется глухой тёмный прямоугольник. */
+html body > footer.player:not(#dock-never) {
+  position: fixed;
+  left: var(--dock-gap);
+  right: var(--dock-gap);
+  bottom: var(--dock-gap);
+  z-index: 30;
+  height: var(--dock-height);
+  box-sizing: border-box;
+  margin: 0;
+  /* Одинаковые поля: обложка слева и громкость справа на одном расстоянии от края. */
+  padding: 0 var(--dock-inset);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 640px) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 20px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent !important;
+  backdrop-filter: none;
+  isolation: isolate;
+}
+/* Само стекло — отдельным слоем: его форма анимируется при появлении, а кнопки — нет. */
+html body > footer.player::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, #ffffff17, #ffffff05 38%, transparent 62%), rgba(24, 24, 27, 0.56);
+  border: 1px solid #ffffff1f;
+  box-shadow:
+    inset 0 1px 0 #ffffff2e,
+    inset 0 -1px 0 #00000040,
+    0 18px 50px #00000073,
+    0 2px 10px #00000040;
+  backdrop-filter: blur(26px) saturate(1.7);
+  transform-origin: 50% 100%;
+}
+/* Всплеск при «приземлении» капли. */
+html body > footer.player::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(closest-side, #ffffff2e, #ffffff12 55%, transparent 100%);
+}
+.flat-theme > footer.player::before {
+  backdrop-filter: blur(18px);
+  background: rgba(22, 22, 22, 0.86);
+}
+
+/* Содержимое прокручивается под стеклом, а не исчезает за ним. */
+body > main::after {
+  content: '';
+  display: block;
+  height: var(--dock-space);
+}
+body > .sidebar,
+body > .now-panel {
+  padding-bottom: calc(var(--dock-space) + 6px) !important;
+}
+#immersive {
+  bottom: var(--dock-space) !important;
+}
+
+/* Ничего не играет — панели нет и место не занято. */
+body.dock-idle > footer.player {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ——— Появление: капля падает в центр, сплющивается и растекается к краям ———
+   Две независимые анимации стекла: падение (движение, с ускорением как под тяжестью) и
+   форма (круглая капля → сплющенная при ударе → пружиной растекается до краёв).
+   Мягкое свечение-всплеск расходится от точки удара, кнопки проявляются в конце. */
+body > footer.player.dock-enter::before {
+  animation:
+    dock-fall 1150ms linear both,
+    dock-shape 1150ms linear both;
+}
+body > footer.player.dock-enter::after {
+  animation: dock-splash 1150ms linear both;
+}
+body > footer.player.dock-enter > :not(.dock-close) {
+  animation: dock-content 1150ms linear both;
+}
+@keyframes dock-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-58px);
+    filter: brightness(2.3);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.5);
+  }
+  8% {
+    opacity: 1;
+  }
+  27% {
+    transform: translateY(0);
+    filter: brightness(2.3);
+    animation-timing-function: cubic-bezier(0.25, 0.8, 0.35, 1);
+  }
+  /* Лёгкий перелёт по ширине в конце растекания и возврат. */
+  80% {
+    transform: scale(1.008, 1);
+    filter: brightness(1.15);
+    animation-timing-function: ease-in-out;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes dock-shape {
+  0% {
+    clip-path: inset(14px calc(50% - 25px) round 25px);
+  }
+  27% {
+    clip-path: inset(14px calc(50% - 25px) round 25px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  /* Удар: капля сплющивается и раздаётся вширь. */
+  35% {
+    clip-path: inset(22px calc(50% - 44px) round 25px);
+    animation-timing-function: cubic-bezier(0.42, 0.05, 0.18, 1);
+  }
+  /* Растекание к краям: плавный разгон и мягкое торможение у краёв. */
+  86% {
+    clip-path: inset(0 0 round 22px);
+  }
+  100% {
+    clip-path: inset(0 0 round 22px);
+  }
+}
+@keyframes dock-splash {
+  0%,
+  27% {
+    opacity: 0;
+    transform: scale(0.05, 0.5);
+  }
+  33% {
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  85% {
+    opacity: 0;
+    transform: scale(1.06, 1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06, 1.35);
+  }
+}
+@keyframes dock-content {
+  0%,
+  68% {
+    opacity: 0;
+    transform: translateY(5px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Исчезновение (трек убрали): стекло стягивается к центру и тает. */
+body > footer.player.dock-leave::before {
+  animation: dock-leave 420ms cubic-bezier(0.5, 0, 0.75, 0) both;
+}
+body > footer.player.dock-leave > * {
+  animation: dock-content 300ms ease reverse both;
+}
+@keyframes dock-leave {
+  to {
+    opacity: 0;
+    clip-path: inset(10px calc(50% - 30px) round 999px);
+    transform: translateY(24px) scale(1, 0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body > footer.player.dock-enter::before,
+  body > footer.player.dock-enter::after,
+  body > footer.player.dock-enter > :not(.dock-close),
+  body > footer.player.dock-leave::before,
+  body > footer.player.dock-leave > * {
+    animation-duration: 1ms;
+  }
+}
+
+/* «×» в углу панели: появляется при наведении и с клавиатуры. */
+body > footer.player .dock-close {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #ffffff26;
+  background: rgba(40, 40, 44, 0.85);
+  backdrop-filter: blur(12px);
+  color: #e8e8ec;
+  box-shadow: 0 4px 14px #0007;
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+body > footer.player .dock-close svg {
+  width: 12px;
+  height: 12px;
+}
+body > footer.player:is(:hover, :focus-within) .dock-close {
+  opacity: 1;
+  transform: none;
+}
+body > footer.player .dock-close:hover {
+  background: rgba(70, 70, 76, 0.95);
+}
+
+/* Содержимое панели: обложка по центру высоты с тем же отступом, что слева; блок с паузой и
+   перемоткой точно по центру панели (боковые колонки равны) и с равными полями сверху и снизу. */
+body > footer.player > .player-track {
+  align-self: center;
+  min-width: 0;
+}
+body > footer.player #mini-cover {
+  width: calc(var(--dock-height) - var(--dock-inset) * 2);
+  height: calc(var(--dock-height) - var(--dock-inset) * 2);
+  flex: 0 0 auto;
+  border-radius: 12px;
+}
+body > footer.player > .transport {
+  align-self: center;
+  width: 100%;
+}
+body > footer.player .volume-control {
+  justify-self: end;
+}

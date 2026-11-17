@@ -96,6 +96,13 @@ module.exports = ({
     clearTimeout(timer);
     timer = setTimeout(() => write().catch(() => {}), 500);
   });
+  // Плеер закрыли кнопкой «×»: прошлый трек не должен вернуться при следующем запуске.
+  ipcMain.on('playback-session-clear', (e) => {
+    if (!valid(e)) return;
+    state = null;
+    clearTimeout(timer);
+    writes = writes.catch(() => {}).then(() => fs.unlink(file).catch(() => {}));
+  });
   ipcMain.handle('playback-session-load', async (e) => {
     if (!valid(e)) throw Error('Invalid sender');
     await ready;
