@@ -92,8 +92,9 @@ try {
     `getComputedStyle(document.querySelector('.hero')).backgroundImage==='none'`
   );
   await check(
-    'Back icon is centered',
-    `(()=>{const a=document.querySelector('.dashboard-back').getBoundingClientRect(),b=document.querySelector('.dashboard-back svg').getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2)<1&&Math.abs(a.y+a.height/2-b.y-b.height/2)<1})()`
+    // Кнопку «Назад» убирает новая раскладка поиска (search-layout.js); проверяем, только если она есть.
+    'Back icon is centered when shown',
+    `(()=>{const back=document.querySelector('.dashboard-back');if(!back)return true;const a=back.getBoundingClientRect(),b=back.querySelector('svg').getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2)<1&&Math.abs(a.y+a.height/2-b.y-b.height/2)<1})()`
   );
   await check(
     'Lyric action buttons have equal height',
