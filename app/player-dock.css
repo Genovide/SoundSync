@@ -3,7 +3,8 @@
    (размытие и насыщенность того, что под ней, блик сверху, мягкая тень). Пока ничего не
    играет, панели нет; при первом треке она «падает каплей» из центра (player-dock.js). */
 :root {
-  --dock-height: 78px;
+  --dock-height: 92px;
+  --dock-inset: 18px;
   --dock-gap: 14px;
   --dock-space: calc(var(--dock-height) + var(--dock-gap) * 2);
 }
@@ -26,7 +27,12 @@ html body > footer.player:not(#dock-never) {
   height: var(--dock-height);
   box-sizing: border-box;
   margin: 0;
-  padding: 8px 22px;
+  /* Одинаковые поля: обложка слева и громкость справа на одном расстоянии от края. */
+  padding: 0 var(--dock-inset);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 640px) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 20px;
   border: 0;
   border-radius: 22px;
   background: transparent !important;
@@ -241,4 +247,24 @@ body > footer.player:is(:hover, :focus-within) .dock-close {
 }
 body > footer.player .dock-close:hover {
   background: rgba(70, 70, 76, 0.95);
+}
+
+/* Содержимое панели: обложка по центру высоты с тем же отступом, что слева; блок с паузой и
+   перемоткой точно по центру панели (боковые колонки равны) и с равными полями сверху и снизу. */
+body > footer.player > .player-track {
+  align-self: center;
+  min-width: 0;
+}
+body > footer.player #mini-cover {
+  width: calc(var(--dock-height) - var(--dock-inset) * 2);
+  height: calc(var(--dock-height) - var(--dock-inset) * 2);
+  flex: 0 0 auto;
+  border-radius: 12px;
+}
+body > footer.player > .transport {
+  align-self: center;
+  width: 100%;
+}
+body > footer.player .volume-control {
+  justify-self: end;
 }
