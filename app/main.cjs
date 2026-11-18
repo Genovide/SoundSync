@@ -108,6 +108,12 @@ function flushUiPreferences() {
 ipcMain.on('ui-theme-read', (event) => {
   event.returnValue = typeof uiPreferences.flatTheme === 'boolean' ? uiPreferences.flatTheme : null;
 });
+// Заставка ждёт, пока окно действительно появится: скрытое окно рисуется и считается
+// «видимым» для страницы, и видео проигрывалось бы до того, как его покажут.
+ipcMain.handle(
+  'window-shown-state',
+  (event) => BrowserWindow.fromWebContents(event.sender)?.isVisible() ?? true
+);
 ipcMain.handle('ui-theme-save', (event, flat) => persistUiPreferences(event, { flatTheme: flat }));
 ipcMain.on('ui-preferences-read', (event) => {
   event.returnValue = uiPreferences;
@@ -717,6 +723,7 @@ app
         else app.quit();
       }
     });
+    win.on('show', () => win.webContents.send('window-shown'));
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (e) => e.preventDefault());
     // В тестовых прогонах (smoke, интерфейсные проверки) заставка не нужна.

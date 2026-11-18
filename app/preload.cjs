@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('lumen', {
   sessionLoad: () => ipcRenderer.invoke('playback-session-load'),
   sessionState: (state) => ipcRenderer.send('playback-session-state', state),
   sessionClear: () => ipcRenderer.send('playback-session-clear'),
+  // Заставка: окно уже на экране? И сигнал, когда его покажут.
+  windowShown: () => ipcRenderer.invoke('window-shown-state'),
+  onWindowShown: (fn) => ipcRenderer.on('window-shown', () => fn()),
   onSessionCapture: (fn) => ipcRenderer.on('playback-session-capture', () => fn()),
   storageInfo: (force) => ipcRenderer.invoke('storage-info', force),
   storageClear: (id) => ipcRenderer.invoke('storage-clear', id),
